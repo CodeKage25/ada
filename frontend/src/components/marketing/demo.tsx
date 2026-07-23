@@ -188,6 +188,8 @@ export function HeroHeadline() {
     <h1 className="display fluid-hero">
       {lines[0].map(word)}
       <br />
+      {/* Editorial indent on the second line — the headline steps, it doesn't stack */}
+      <span className="hidden lg:inline-block lg:w-[1.1em]" aria-hidden />
       {lines[1].map(word)}
       <motion.em
         className="relative inline-block text-accent"
@@ -494,6 +496,51 @@ function CareerLane({ roles, reverse = false }: { roles: string[]; reverse?: boo
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Editorial process timeline: a rail that draws itself as you read, ghost
+ *  serif numerals behind each step, alternating indents. The rail's fill IS
+ *  your progress through the process — motion with a meaning. */
+export function Timeline({ steps }: { steps: { title: string; body: string }[] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 0.75", "end 0.55"],
+  });
+  const scaleY = useSpring(scrollYProgress, { stiffness: 130, damping: 27 });
+  return (
+    <div ref={ref} className="relative pl-10">
+      <div className="absolute bottom-2 left-3 top-2 w-px bg-line" aria-hidden />
+      <motion.div
+        className="absolute bottom-2 left-3 top-2 w-px origin-top bg-accent"
+        style={reduce ? undefined : { scaleY }}
+        aria-hidden
+      />
+      <ol className="space-y-16">
+        {steps.map((step, i) => (
+          <li key={step.title} className={`relative ${i % 2 === 1 ? "lg:ml-16" : ""}`}>
+            <span
+              className="absolute -left-[31px] top-1.5 size-2.5 rounded-full border-2 border-accent bg-surface"
+              aria-hidden
+            />
+            <p
+              className="display pointer-events-none absolute -left-4 -top-9 select-none text-[5.5rem] leading-none text-accent/[0.09]"
+              aria-hidden
+            >
+              {String(i + 1).padStart(2, "0")}
+            </p>
+            <Reveal delay={0.05}>
+              <h3 className="relative mb-1.5 font-semibold">{step.title}</h3>
+              <p className="relative max-w-md text-sm leading-relaxed text-muted">
+                {step.body}
+              </p>
+            </Reveal>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

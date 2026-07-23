@@ -10,6 +10,7 @@ import {
   Reveal,
   ScrollProgress,
   ScrubText,
+  Timeline,
 } from "@/components/marketing/demo";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
 import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
@@ -115,54 +116,60 @@ export default function Landing() {
       <ScrollProgress />
       <Nav />
       <main>
-        {/* Hero — centered, editorial */}
+        {/* Hero — asymmetric editorial composition: type carries the left
+            column, the live demo overlaps in from the right */}
         <section className="glow-field relative overflow-hidden">
           <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
-          <div className="mx-auto max-w-5xl px-5 pb-24 pt-36 text-center sm:pt-40">
-            <Reveal>
-              <p className="mb-8 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-4 py-1.5 text-xs text-muted shadow-card backdrop-blur">
-                <span className="pulse-soft size-1.5 rounded-full bg-success" />
-                An autonomous career agent — live now
-              </p>
-            </Reveal>
-            <HeroHeadline />
-            <Reveal delay={0.5}>
-              <p className="mx-auto mt-8 max-w-xl text-balance text-lg leading-relaxed text-muted">
-                One run: your CV rewritten for the role you want — in any industry —
-                your best-fit jobs ranked, and a scored mock interview. No humans in
-                the loop. Just Ada, working in minutes.
-              </p>
-            </Reveal>
-            <Reveal delay={0.6}>
-              <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-                <Magnetic>
-                  <Link href="/app/new">
-                    <Button className="group !px-8 !py-4 text-base">
-                      Start your run
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
+          <div className="mx-auto grid max-w-6xl items-start gap-14 px-5 pb-24 pt-32 sm:pt-36 lg:grid-cols-[1.15fr_0.85fr] lg:gap-4">
+            <div>
+              <Reveal>
+                <p className="eyebrow mb-8 flex items-center gap-3">
+                  <span className="h-px w-10 bg-accent" aria-hidden />
+                  Autonomous career agent
+                  <span className="flex items-center gap-1.5 normal-case tracking-normal text-success">
+                    <span className="pulse-soft size-1.5 rounded-full bg-success" />
+                    live
+                  </span>
+                </p>
+              </Reveal>
+              <HeroHeadline />
+              <Reveal delay={0.5}>
+                <p className="mt-8 max-w-md text-lg leading-relaxed text-muted">
+                  One run: your CV rewritten for the role you want — in any industry —
+                  your best-fit jobs ranked, and a scored mock interview. No humans in
+                  the loop.
+                </p>
+              </Reveal>
+              <Reveal delay={0.6}>
+                <div className="mt-9 flex flex-wrap items-center gap-4">
+                  <Magnetic>
+                    <Link href="/app/new">
+                      <Button className="group !px-8 !py-4 text-base">
+                        Start your run
+                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                      </Button>
+                    </Link>
+                  </Magnetic>
+                  <Link
+                    href="/app/voice"
+                    className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+                  >
+                    or talk to Ada first
                   </Link>
-                </Magnetic>
-                <Link
-                  href="/app/voice"
-                  className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-                >
-                  or talk to Ada first
-                </Link>
-              </div>
-            </Reveal>
-            <Reveal delay={0.7}>
-              {/* One editorial line instead of a stat grid — the numbers live
-                  inside the sentence, where they mean something. */}
-              <p className="mx-auto mt-12 max-w-xl border-t border-line pt-6 text-balance text-sm leading-loose text-muted">
-                Under <em className="display text-xl text-ink">three minutes</em> from
-                payment to results. <em className="display text-xl text-ink">One</em>{" "}
-                payment, no subscription.{" "}
-                <em className="display text-xl text-ink">Zero</em> humans reading your
-                CV.
-              </p>
-            </Reveal>
-            <Reveal delay={0.35} className="mt-16">
+                </div>
+              </Reveal>
+              <Reveal delay={0.7}>
+                {/* Sidenote, not a stat grid: the numbers live inside a sentence */}
+                <p className="mt-12 max-w-md border-l-2 border-accent/40 pl-5 text-sm leading-loose text-muted">
+                  Under <em className="display text-xl text-ink">three minutes</em> from
+                  payment to results. <em className="display text-xl text-ink">One</em>{" "}
+                  payment, no subscription.{" "}
+                  <em className="display text-xl text-ink">Zero</em> humans reading
+                  your CV.
+                </p>
+              </Reveal>
+            </div>
+            <Reveal delay={0.35} className="lg:mt-20">
               <HeroShowcase />
             </Reveal>
           </div>
@@ -190,37 +197,29 @@ export default function Landing() {
         {/* Deliverables — pinned scroll showcase on desktop, stacked on mobile */}
         <DeliverablesShowcase />
 
-        {/* How it works */}
+        {/* How it works — sticky editorial intro on the left, a timeline that
+            draws itself on the right */}
         <section id="how" className="scroll-mt-24 border-y border-line bg-surface py-28">
-          <div className="mx-auto max-w-6xl px-5">
-            <Reveal>
-              <Eyebrow>How it works</Eyebrow>
-              <h2 className="display fluid-h2 mb-14">From CV to prepared, in five steps.</h2>
-            </Reveal>
-            <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {STEPS.map((step, i) => (
-                <Reveal key={step.title} delay={i * 0.04}>
-                  <div className="group border-t-2 border-line pt-5 transition-colors hover:border-accent">
-                    <p className="display mb-3 text-4xl text-accent/80 transition-colors group-hover:text-accent">
-                      {String(i + 1).padStart(2, "0")}
-                    </p>
-                    <h3 className="mb-1.5 font-semibold">{step.title}</h3>
-                    <p className="text-sm leading-relaxed text-muted">{step.body}</p>
-                  </div>
-                </Reveal>
-              ))}
-              <Reveal delay={0.2}>
-                <div className="flex h-full flex-col justify-between rounded-card bg-accent-soft p-6">
-                  <p className="display text-2xl text-accent">Ready when you are.</p>
-                  <Link href="/app/new" className="mt-4">
-                    <Button className="group">
-                      Start a run
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
-                  </Link>
-                </div>
+          <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="lg:sticky lg:top-28 lg:self-start">
+              <Reveal>
+                <Eyebrow>How it works</Eyebrow>
+                <h2 className="display fluid-h2">
+                  From CV to prepared, in five steps.
+                </h2>
+                <p className="mt-4 max-w-sm text-muted">
+                  One payment starts the run. Everything after that is Ada working —
+                  the rail on the right is the whole process.
+                </p>
+                <Link href="/app/new" className="mt-8 inline-block">
+                  <Button className="group">
+                    Start a run
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
+                </Link>
               </Reveal>
             </div>
+            <Timeline steps={STEPS} />
           </div>
         </section>
 
@@ -300,13 +299,16 @@ export default function Landing() {
               {FAQS.map((faq, i) => (
                 <Reveal key={faq.q} delay={i * 0.03}>
                   <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
-                      {faq.q}
+                    <summary className="flex cursor-pointer list-none items-center gap-4 text-[15px] font-medium transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
+                      <span className="display w-8 shrink-0 text-lg text-muted/50">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1">{faq.q}</span>
                       <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-lg text-muted transition-transform duration-200 group-open:rotate-45">
                         +
                       </span>
                     </summary>
-                    <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+                    <p className="mt-3 max-w-2xl pl-12 text-sm leading-relaxed text-muted">
                       {faq.a}
                     </p>
                   </details>
