@@ -1,6 +1,13 @@
 "use client";
 
-import { Check, Copy, Download, FileDown, MessageSquareText } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Copy,
+  Download,
+  FileDown,
+  MessageSquareText,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -114,9 +121,9 @@ function RunDetail() {
       )}
 
       <section className="mb-10">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5">
           <SectionTitle>ATS-optimised CV</SectionTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="secondary" onClick={copyCv} className="!px-3 !py-1.5 text-xs">
               {copied ? (
                 <Check className="size-3.5 text-success" />
@@ -153,19 +160,26 @@ function RunDetail() {
           <div className="space-y-3">
             {run.matches.map((m, i) => (
               <Card key={i} hover className="px-5 py-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div>
-                    <p className="font-medium">{m.title}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {m.company} · {m.location}
-                    </p>
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-line bg-surface-2 text-xs font-semibold text-muted">
+                    {m.company.slice(0, 2)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{m.title}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          {m.company} · {m.location}
+                        </p>
+                      </div>
+                      <span className="display text-2xl text-accent">{m.match}%</span>
+                    </div>
+                    <div className="mt-3">
+                      <ScoreBar value={m.match} />
+                    </div>
+                    <p className="mt-2.5 text-xs leading-relaxed text-muted">{m.reason}</p>
                   </div>
-                  <span className="display text-2xl text-accent">{m.match}%</span>
                 </div>
-                <div className="mt-3">
-                  <ScoreBar value={m.match} />
-                </div>
-                <p className="mt-2.5 text-xs leading-relaxed text-muted">{m.reason}</p>
               </Card>
             ))}
           </div>
@@ -215,6 +229,21 @@ function RunDetail() {
             )}
           </Card>
         </section>
+      )}
+
+      {/* Mobile: the next step floats above the tab bar on a paper fade
+          (per the mobile design canvas) */}
+      {run.questions && run.questions.length > 0 && !run.interview && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 bg-gradient-to-t from-bg via-bg/85 to-transparent px-5 pb-28 pt-12 lg:hidden">
+          <Link
+            href={`/app/runs/${id}/interview`}
+            className="pointer-events-auto block"
+          >
+            <Button className="w-full !py-3.5">
+              Take the mock interview <ArrowRight className="size-4" />
+            </Button>
+          </Link>
+        </div>
       )}
     </>
   );

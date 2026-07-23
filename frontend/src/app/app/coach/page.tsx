@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Square } from "lucide-react";
+import { ArrowUp, Mic, Square } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -27,11 +27,16 @@ export default function CoachPage() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
+  const [runsCount, setRunsCount] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     api.getProfile().then((p) => setHasProfile(p !== null)).catch(() => setHasProfile(false));
+    api
+      .listRuns()
+      .then((rs) => setRunsCount(rs.filter((r) => r.status === "complete").length))
+      .catch(() => setRunsCount(null));
   }, []);
 
   // A question handed over from the dashboard's "Ask Ada anything" box.
@@ -98,7 +103,12 @@ export default function CoachPage() {
       {!empty && (
         <div className="mb-4 flex items-baseline justify-between border-b border-line pb-4">
           <h1 className="display text-2xl">Ask Ada.</h1>
-          <p className="text-xs text-muted">Grounded in your profile and runs</p>
+          <span className="flex items-center gap-1.5 text-[11px] text-muted">
+            <span className="pulse-soft size-1.5 rounded-full bg-success" />
+            {runsCount
+              ? `Grounded in ${runsCount} ${runsCount === 1 ? "run" : "runs"}`
+              : "Grounded in your profile"}
+          </span>
         </div>
       )}
       {hasProfile === false && !empty && (
@@ -175,7 +185,7 @@ export default function CoachPage() {
         <div className="flex items-end gap-2 rounded-3xl border border-line bg-surface p-2 shadow-card transition-colors focus-within:border-accent">
           <textarea
             rows={1}
-            placeholder="Ask Ada anything about your career..."
+            placeholder="Ask Ada anything…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -186,6 +196,13 @@ export default function CoachPage() {
             }}
             className="max-h-40 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none quiet-scroll placeholder:text-muted/70"
           />
+          <Link
+            href="/app/voice"
+            aria-label="Switch to voice intake"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-line/40 hover:text-ink"
+          >
+            <Mic className="size-4" />
+          </Link>
           {streaming ? (
             <button
               type="button"

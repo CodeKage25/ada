@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,24 @@ export const metadata: Metadata = {
   },
   description:
     "Ada rewrites your CV for the role you want — in any industry — finds your best-fit jobs, and coaches you through the interview. One agent, end to end.",
+  // Installed-app behavior on iOS: full-screen, titled, paper status bar.
+  appleWebApp: {
+    capable: true,
+    title: "Ada",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Extend the canvas under the home indicator; the floating tab bar and
+  // fixed CTAs pad themselves with env(safe-area-inset-bottom).
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
+    { media: "(prefers-color-scheme: dark)", color: "#12110e" },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

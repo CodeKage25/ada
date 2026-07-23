@@ -15,8 +15,17 @@ export default function VoicePage() {
   const [state, setState] = useState<CallState>("idle");
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState("");
+  const [seconds, setSeconds] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const micRef = useRef<MicSession | null>(null);
+
+  // Session clock, shown in the eyebrow while Ada listens.
+  useEffect(() => {
+    if (state !== "live") return;
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [state]);
+  const clock = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
   const cleanup = () => {
     micRef.current?.stop();
@@ -30,6 +39,7 @@ export default function VoicePage() {
     setState("connecting");
     setError("");
     setTranscript("");
+    setSeconds(0);
     try {
       const ws = new WebSocket(voiceWsUrl());
       wsRef.current = ws;
@@ -101,42 +111,55 @@ export default function VoicePage() {
         subtitle="A short spoken intake — Ada asks about your background and target role, then drafts your run for you."
       />
 
-      <Card className="flex flex-col items-center gap-6 p-10">
-        {state === "idle" || state === "error" ? (
-          <>
-            <div className="flex size-20 items-center justify-center rounded-full bg-accent-soft">
-              <Mic className="size-8 text-accent" />
-            </div>
-            {error && <p className="text-center text-sm text-danger">{error}</p>}
-            <Button onClick={start} className="!px-7 !py-3">
-              Start the conversation
-            </Button>
-            <p className="text-center text-xs text-muted">
-              Uses your microphone. Prefer typing? Use{" "}
-              <a href="/app/new" className="underline underline-offset-2 transition-colors hover:text-ink">
-                the form
-              </a>
-              .
+      {state === "idle" || state === "error" ? (
+        <Card className="flex flex-col items-center gap-6 p-10">
+          <div className="flex size-20 items-center justify-center rounded-full bg-accent-soft">
+            <Mic className="size-8 text-accent" />
+          </div>
+          {error && <p className="text-center text-sm text-danger">{error}</p>}
+          <Button onClick={start} className="!px-7 !py-3">
+            Start the conversation
+          </Button>
+          <p className="text-center text-xs text-muted">
+            Uses your microphone. Prefer typing? Use{" "}
+            <a href="/app/new" className="underline underline-offset-2 transition-colors hover:text-ink">
+              the form
+            </a>
+            .
+          </p>
+        </Card>
+      ) : (
+        /* Live session: always dark, whatever the app theme — hardcoded to the
+           dark palette per the mobile design canvas ("Voice session · dark"). */
+        <div className="relative overflow-hidden rounded-card border border-[#2b2925] bg-[#12110e] text-[#f2f0ea] shadow-lift">
+          <div
+            className="pointer-events-none absolute left-1/2 top-8 size-80 -translate-x-1/2 rounded-full bg-[#8b85f4]/15 blur-3xl"
+            aria-hidden
+          />
+          <div className="relative flex flex-col items-center px-7 pb-7 pt-10 text-center">
+            <p className="eyebrow mb-2 !text-[#a09a8c]">
+              Voice intake{state === "live" ? ` · ${clock}` : ""}
             </p>
-          </>
-        ) : (
-          <>
-            <div className="relative flex size-24 items-center justify-center">
-              {state === "live" && (
-                <>
-                  <span className="ring-ping absolute inset-2 rounded-full border-2 border-accent" aria-hidden />
+            <h2 className="display mb-9 text-3xl">
+              Tell Ada about
+              <br />
+              your career.
+            </h2>
+            <div className="relative mb-8 size-32">
+              {state === "live" &&
+                ["0s", "0.6s", "1.2s"].map((delay) => (
                   <span
-                    className="ring-ping absolute inset-2 rounded-full border-2 border-accent"
-                    style={{ animationDelay: "0.6s" }}
+                    key={delay}
+                    className="ring-ping absolute inset-0 rounded-full border-[1.5px] border-[#8b85f4]/45"
+                    style={{ animationDelay: delay }}
                     aria-hidden
                   />
-                </>
-              )}
+                ))}
               <div
-                className={`relative flex size-20 items-center justify-center rounded-full ${
+                className={`absolute inset-2.5 flex items-center justify-center rounded-full ${
                   state === "live"
-                    ? "bg-accent text-accent-ink shadow-btn"
-                    : "pulse-soft bg-accent-soft text-accent"
+                    ? "bg-[#8b85f4] text-[#12110e] shadow-[0_0_60px_rgba(139,133,244,0.4)]"
+                    : "pulse-soft bg-[#232145] text-[#8b85f4]"
                 }`}
               >
                 {state === "connecting" ? (
@@ -146,23 +169,50 @@ export default function VoicePage() {
                 )}
               </div>
             </div>
-            <p className="text-sm text-muted">
+            {state === "live" && (
+              <div className="mb-6 flex h-6 items-end gap-[3px]" aria-hidden>
+                {[8, 16, 22, 12, 18, 7, 14].map((h, i) => (
+                  <span
+                    key={i}
+                    className="eq-bar w-[3px] rounded-full bg-[#8b85f4]"
+                    style={{ height: h, animationDelay: `${i * 0.13}s` }}
+                  />
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-[#a09a8c]">
               {state === "connecting" && "Connecting to Ada..."}
               {state === "live" && "Ada is listening — speak naturally."}
               {state === "extracting" && "Wrapping up — drafting your run..."}
             </p>
             {transcript && (
-              <div className="max-h-48 w-full overflow-y-auto rounded-xl border border-line bg-bg p-4 text-sm leading-relaxed quiet-scroll">
+              <div className="quiet-scroll mt-5 max-h-44 w-full overflow-y-auto rounded-xl border border-[#2b2925] bg-[#1a1916] p-4 text-left text-sm leading-relaxed">
                 {transcript}
-                <span className="caret-blink text-accent">▎</span>
+                <span className="caret-blink text-[#8b85f4]">▎</span>
               </div>
             )}
-            <Button variant="danger" onClick={end} disabled={state === "extracting"}>
-              <PhoneOff className="size-4" /> End &amp; draft my run
-            </Button>
-          </>
-        )}
-      </Card>
+            <div className="mt-8 flex w-full gap-2.5">
+              <button
+                onClick={() => {
+                  cleanup();
+                  setState("idle");
+                }}
+                disabled={state === "extracting"}
+                className="flex-1 rounded-full border border-[#2b2925] bg-[#1a1916] py-3 text-sm font-medium text-[#a09a8c] transition-colors hover:text-[#f2f0ea] disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={end}
+                disabled={state === "extracting"}
+                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#8b85f4] py-3 text-sm font-medium text-[#12110e] shadow-[0_4px_14px_rgba(139,133,244,0.25)] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <PhoneOff className="size-4" /> End &amp; draft my run
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
