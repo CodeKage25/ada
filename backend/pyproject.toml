@@ -40,4 +40,9 @@ ignore = ["B008"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# One event loop for the whole test session: the app's engine pools asyncpg
+# connections, and per-test loops make a pooled connection created in one test
+# blow up ("attached to a different loop") when the next test checks it out.
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
