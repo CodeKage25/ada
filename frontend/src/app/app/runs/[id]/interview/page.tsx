@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -130,18 +131,25 @@ export default function InterviewPage() {
       </div>
 
       <Card className="p-6 sm:p-8">
-        <p className="display mb-5 text-xl leading-snug sm:text-2xl">
-          {questions[index]}
-        </p>
-        <Textarea
-          rows={7}
-          autoFocus
-          placeholder="Type your answer..."
-          value={answers[index] ?? ""}
-          onChange={(e) =>
-            setAnswers((prev) => prev.map((a, i) => (i === index ? e.target.value : a)))
-          }
-        />
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, ease: [0.21, 0.6, 0.35, 1] }}
+        >
+          <p className="display mb-5 text-xl leading-snug sm:text-2xl">
+            {questions[index]}
+          </p>
+          <Textarea
+            rows={7}
+            autoFocus
+            placeholder="Type your answer..."
+            value={answers[index] ?? ""}
+            onChange={(e) =>
+              setAnswers((prev) => prev.map((a, i) => (i === index ? e.target.value : a)))
+            }
+          />
+        </motion.div>
         {error && <p className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex items-center justify-between">
           <Button

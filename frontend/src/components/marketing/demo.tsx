@@ -6,6 +6,63 @@ import { useEffect, useState } from "react";
 
 import { Card, ScoreBar } from "@/components/ui";
 
+const EASE = [0.21, 0.6, 0.35, 1] as const;
+
+/** Hero headline: words rise out of a blur one by one, then a hand-drawn
+ *  underline sweeps beneath "hired". */
+export function HeroHeadline() {
+  const lines = [
+    ["Meet", "Ada."],
+    ["She", "gets", "you"],
+  ];
+  let i = 0;
+  const word = (w: string) => {
+    const delay = 0.15 + i++ * 0.08;
+    return (
+      <motion.span
+        key={`${w}-${i}`}
+        className="inline-block whitespace-pre"
+        initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.6, delay, ease: EASE }}
+      >
+        {w}{" "}
+      </motion.span>
+    );
+  };
+  return (
+    <h1 className="display fluid-hero">
+      {lines[0].map(word)}
+      <br />
+      {lines[1].map(word)}
+      <motion.em
+        className="relative inline-block text-accent"
+        initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.6, delay: 0.15 + 5 * 0.08, ease: EASE }}
+      >
+        hired.
+        <svg
+          className="absolute -bottom-[0.12em] left-0 w-full"
+          viewBox="0 0 220 16"
+          fill="none"
+          aria-hidden
+        >
+          <motion.path
+            d="M5 11 C 55 3, 115 15, 215 7"
+            stroke="currentColor"
+            strokeWidth="5"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.7, delay: 1, ease: "easeOut" }}
+          />
+        </svg>
+      </motion.em>
+    </h1>
+  );
+}
+
 /** Self-running demo of a real run: the same stages, matches, and scorecard the
  *  product renders — no screenshots, no mockups. Loops forever in the hero. */
 
@@ -17,12 +74,12 @@ const STAGES = [
 ];
 
 const MATCHES = [
-  { title: "Senior Backend Engineer", company: "Paystack", location: "Lagos · Hybrid", match: 92 },
-  { title: "Platform Engineer", company: "Andela", location: "Remote", match: 87 },
-  { title: "Backend Engineer (Python)", company: "Flutterwave", location: "Remote · Africa", match: 84 },
+  { title: "Regional Sales Manager", company: "Coca-Cola HBC", location: "Lagos · On-site", match: 93 },
+  { title: "Business Development Lead", company: "MTN", location: "Hybrid", match: 88 },
+  { title: "Key Account Manager", company: "Nestlé", location: "Remote · West Africa", match: 84 },
 ];
 
-export function HeroDemo() {
+function DemoCard() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -34,91 +91,131 @@ export function HeroDemo() {
   const progress = Math.min(1, step / STAGES.length);
 
   return (
-    <div className="relative w-full max-w-md">
-      {/* Soft halo behind the card */}
+    <Card className="w-full overflow-hidden text-left shadow-lift">
+      <div className="border-b border-line px-5 py-3.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="display flex size-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13px] text-accent">
+              A
+            </span>
+            <p className="truncate text-xs font-medium">
+              Amara <span className="text-muted">→ Sales Manager</span>
+            </p>
+          </div>
+          <p className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium text-muted">
+            <span
+              className={`size-2 rounded-full ${showMatches ? "bg-success" : "pulse-soft bg-accent"}`}
+            />
+            {showMatches ? "Run complete" : "Running"}
+          </p>
+        </div>
+        <div className="mt-3 h-0.5 overflow-hidden rounded-full bg-line">
+          <div
+            className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
+      </div>
+      <div className="p-5">
+        {showMatches ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-3.5"
+          >
+            {MATCHES.map((m, i) => (
+              <motion.div
+                key={m.title}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.12 }}
+              >
+                <div className="flex items-baseline justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{m.title}</p>
+                    <p className="truncate text-[11px] text-muted">
+                      {m.company} · {m.location}
+                    </p>
+                  </div>
+                  <span className="display text-xl text-accent">{m.match}%</span>
+                </div>
+                <div className="mt-1.5">
+                  <ScoreBar value={m.match} />
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <ol className="space-y-3.5">
+            {STAGES.map((label, i) => {
+              const done = i < step;
+              const active = i === step;
+              return (
+                <li key={label} className="flex items-center gap-3">
+                  <span
+                    className={`flex size-5 items-center justify-center rounded-full border text-[10px] transition-colors ${
+                      done
+                        ? "border-accent bg-accent text-accent-ink"
+                        : active
+                          ? "border-accent text-accent"
+                          : "border-line text-muted"
+                    }`}
+                  >
+                    {done ? <Check className="size-3" /> : i + 1}
+                  </span>
+                  <span
+                    className={`text-[13px] ${done ? "text-ink" : active ? "pulse-soft text-ink" : "text-muted"}`}
+                  >
+                    {label}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ProofChip({
+  className = "",
+  style,
+  children,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={`float-y absolute z-10 flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-xs font-medium shadow-lift max-lg:hidden ${className}`}
+      style={style}
+      aria-hidden
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Demo card with floating proof chips orbiting it. */
+export function HeroShowcase() {
+  return (
+    <div className="relative mx-auto w-full max-w-md">
       <div
-        className="absolute -inset-8 -z-10 rounded-[2.5rem] bg-accent/10 blur-3xl"
+        className="absolute -inset-10 -z-10 rounded-[3rem] bg-accent/10 blur-3xl"
         aria-hidden
       />
-      <Card className="w-full overflow-hidden shadow-lift">
-        <div className="border-b border-line px-5 py-3">
-          <div className="flex items-center justify-between">
-            <p className="flex items-center gap-2 text-xs font-medium text-muted">
-              <span
-                className={`size-2 rounded-full ${showMatches ? "bg-success" : "pulse-soft bg-accent"}`}
-              />
-              {showMatches ? "Run complete — 3 matches found" : "Ada is running"}
-            </p>
-            <span className="display text-sm text-muted/70">
-              Ada<span className="text-accent">.</span>
-            </span>
-          </div>
-          <div className="mt-2.5 h-0.5 overflow-hidden rounded-full bg-line">
-            <div
-              className="h-full rounded-full bg-accent transition-all duration-700 ease-out"
-              style={{ width: `${progress * 100}%` }}
-            />
-          </div>
-        </div>
-        <div className="p-5">
-          {showMatches ? (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-3.5"
-            >
-              {MATCHES.map((m, i) => (
-                <motion.div
-                  key={m.title}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.12 }}
-                >
-                  <div className="flex items-baseline justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{m.title}</p>
-                      <p className="text-[11px] text-muted">
-                        {m.company} · {m.location}
-                      </p>
-                    </div>
-                    <span className="display text-xl text-accent">{m.match}%</span>
-                  </div>
-                  <div className="mt-1.5">
-                    <ScoreBar value={m.match} />
-                  </div>
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : (
-            <ol className="space-y-3.5">
-              {STAGES.map((label, i) => {
-                const done = i < step;
-                const active = i === step;
-                return (
-                  <li key={label} className="flex items-center gap-3">
-                    <span
-                      className={`flex size-5 items-center justify-center rounded-full border text-[10px] transition-colors ${
-                        done
-                          ? "border-accent bg-accent text-accent-ink"
-                          : active
-                            ? "border-accent text-accent"
-                            : "border-line text-muted"
-                      }`}
-                    >
-                      {done ? <Check className="size-3" /> : i + 1}
-                    </span>
-                    <span
-                      className={`text-[13px] ${done ? "text-ink" : active ? "pulse-soft text-ink" : "text-muted"}`}
-                    >
-                      {label}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </div>
-      </Card>
+      <ProofChip className="-left-36 top-8 -rotate-3">
+        <Check className="size-3.5 text-success" /> CV rewritten — ATS-safe
+      </ProofChip>
+      <ProofChip className="-right-28 top-1/3 rotate-2" style={{ animationDelay: "1.2s" }}>
+        <span className="display text-base text-accent">93%</span> match found
+      </ProofChip>
+      <ProofChip className="-left-28 bottom-10 rotate-1" style={{ animationDelay: "2.1s" }}>
+        Interview scored <span className="display text-base text-accent">8/10</span>
+      </ProofChip>
+      <DemoCard />
     </div>
   );
 }
@@ -137,7 +234,7 @@ export function Reveal({
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.55, delay, ease: [0.21, 0.6, 0.35, 1] }}
+      transition={{ duration: 0.55, delay, ease: EASE }}
       className={className}
     >
       {children}
@@ -145,28 +242,75 @@ export function Reveal({
   );
 }
 
-/** Endless ticker of roles Ada has rewritten CVs for. Duplicated content makes
- *  the -50% translate loop seamless. */
-export function RoleTicker({ roles }: { roles: string[] }) {
+/** Two counter-scrolling lanes of careers — Ada is for every industry, not
+ *  just tech. Duplicated content makes the -50% translate loop seamless. */
+const CAREERS_A = [
+  "Registered Nurse",
+  "Sales Manager",
+  "Accountant",
+  "Secondary School Teacher",
+  "Civil Engineer",
+  "Chef de Partie",
+  "HR Business Partner",
+  "Pharmacist",
+  "Journalist",
+  "Product Designer",
+  "Logistics Coordinator",
+  "Financial Analyst",
+];
+
+const CAREERS_B = [
+  "Marketing Manager",
+  "Lawyer",
+  "Customer Success Lead",
+  "Electrician",
+  "Architect",
+  "Data Analyst",
+  "Flight Attendant",
+  "Project Manager",
+  "Social Media Manager",
+  "Medical Officer",
+  "Interior Designer",
+  "Operations Manager",
+];
+
+function CareerLane({ roles, reverse = false }: { roles: string[]; reverse?: boolean }) {
   const row = [...roles, ...roles];
   return (
-    <div
-      className="relative overflow-hidden border-y border-line bg-surface py-3.5"
-      aria-hidden
-    >
-      <div className="marquee-track">
+    <div className="relative overflow-hidden">
+      <div className={`marquee-track gap-3 ${reverse ? "marquee-reverse" : ""}`}>
         {row.map((role, i) => (
           <span
             key={`${role}-${i}`}
-            className="flex shrink-0 items-center gap-6 pr-6 text-sm text-muted"
+            className="shrink-0 rounded-full border border-line bg-bg px-4 py-2 text-sm text-muted"
           >
             {role}
-            <span className="size-1 rounded-full bg-accent/60" />
           </span>
         ))}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-bg to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-bg to-transparent" />
     </div>
+  );
+}
+
+export function CareersBand() {
+  return (
+    <section className="overflow-hidden border-y border-line bg-surface py-12">
+      <Reveal>
+        <p className="eyebrow mb-2 text-center">For every career</p>
+        <p className="display mx-auto mb-8 max-w-xl px-5 text-center text-2xl">
+          Not just tech. <em className="text-accent">Every</em> industry.
+        </p>
+      </Reveal>
+      <div className="relative space-y-3">
+        <CareerLane roles={CAREERS_A} />
+        <CareerLane roles={CAREERS_B} reverse />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-surface to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-surface to-transparent" />
+      </div>
+      <p className="mt-8 px-5 text-center text-sm text-muted">
+        From classrooms to clinics to boardrooms — Ada speaks your industry&apos;s
+        language.
+      </p>
+    </section>
   );
 }

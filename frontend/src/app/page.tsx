@@ -1,28 +1,13 @@
 import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
-import { HeroDemo, Reveal, RoleTicker } from "@/components/marketing/demo";
+import { CareersBand, HeroHeadline, HeroShowcase, Reveal } from "@/components/marketing/demo";
 import { Button, Card, Eyebrow, Logo, ScoreBar, ThemeToggle } from "@/components/ui";
-
-const TICKER_ROLES = [
-  "Senior Backend Engineer",
-  "Product Manager",
-  "Data Analyst",
-  "Frontend Engineer",
-  "DevOps Engineer",
-  "UX Designer",
-  "Engineering Manager",
-  "Growth Marketer",
-  "Solutions Architect",
-  "Business Analyst",
-  "Mobile Engineer",
-  "Technical Writer",
-];
 
 const STEPS = [
   {
     title: "Tell Ada what you're going for",
-    body: "Paste your CV and name the role — or just talk to her. A few minutes of voice intake is enough.",
+    body: "Paste your CV and name the role — any role, any industry. Or just talk to her: a few minutes of voice intake is enough.",
   },
   {
     title: "Pay once, Ada runs",
@@ -48,6 +33,10 @@ const FAQS = [
     a: "One complete run: your CV rewritten for a specific target role, a ranked list of best-fit roles with match scores, tailored interview questions, and scored feedback on your answers. Everything stays in your account.",
   },
   {
+    q: "Is Ada only for tech jobs?",
+    a: "No. Ada works for any career — nursing, sales, teaching, law, hospitality, finance, engineering, the lot. She rewrites for the vocabulary and conventions of your industry, not just software.",
+  },
+  {
     q: "Does a human read my CV?",
     a: "No. Ada does the entire run herself — rewrite, matching, interview prep, and scoring. That's the point: senior-level career help, delivered by an agent, in minutes.",
   },
@@ -71,31 +60,31 @@ const FAQS = [
 
 const HERO_STATS = [
   ["<3 min", "from payment to results"],
-  ["1", "payment — no subscription"],
+  ["1", "payment, no subscription"],
   ["0", "humans in the loop"],
 ] as const;
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+    <header className="fixed inset-x-0 top-4 z-40 px-4">
+      <div className="mx-auto flex max-w-3xl items-center justify-between rounded-full border border-line/70 bg-surface/80 py-2 pl-5 pr-2 shadow-card backdrop-blur-xl">
         <Link href="/" aria-label="Ada home">
           <Logo />
         </Link>
         <nav className="flex items-center gap-1 text-sm text-muted max-sm:hidden">
-          <a href="#how" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
+          <a href="#how" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             How it works
           </a>
-          <a href="#pricing" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
+          <a href="#pricing" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             Pricing
           </a>
-          <a href="#faqs" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
+          <a href="#faqs" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             FAQs
           </a>
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/login" className="text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
+          <Link href="/login" className="px-2 text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
             Sign in
           </Link>
           <Link href="/app">
@@ -112,70 +101,64 @@ export default function Landing() {
     <>
       <Nav />
       <main>
-        {/* Hero */}
+        {/* Hero — centered, editorial */}
         <section className="glow-field relative overflow-hidden">
           <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
-          <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-20 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
-            <div>
-              <Reveal>
-                <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-xs text-muted shadow-card backdrop-blur">
-                  <span className="pulse-soft size-1.5 rounded-full bg-success" />
-                  An autonomous career agent — live now
-                </p>
-              </Reveal>
-              <Reveal delay={0.05}>
-                <h1 className="display fluid-hero">
-                  Meet Ada.
-                  <br />
-                  She gets you <em className="text-accent">hired</em>.
-                </h1>
-              </Reveal>
-              <Reveal delay={0.1}>
-                <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
-                  One run: your CV rewritten for the role you want, your best-fit jobs
-                  ranked, and a scored mock interview. No humans in the loop — just Ada,
-                  working in minutes.
-                </p>
-              </Reveal>
-              <Reveal delay={0.15}>
-                <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <Link href="/app/new">
-                    <Button className="group !px-7 !py-3.5 text-base">
-                      Start your run
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
-                  </Link>
-                  <Link
-                    href="/app/voice"
-                    className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-                  >
-                    or talk to Ada first
-                  </Link>
-                </div>
-              </Reveal>
-              <Reveal delay={0.2}>
-                <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-line pt-6">
-                  {HERO_STATS.map(([value, label]) => (
-                    <div key={label}>
-                      <dt className="sr-only">{label}</dt>
-                      <dd className="display text-2xl sm:text-3xl">{value}</dd>
-                      <dd className="mt-1 text-xs leading-snug text-muted">{label}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </Reveal>
-            </div>
-            <Reveal delay={0.15} className="flex justify-center lg:justify-end">
-              <HeroDemo />
+          <div className="mx-auto max-w-5xl px-5 pb-24 pt-36 text-center sm:pt-40">
+            <Reveal>
+              <p className="mb-8 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-4 py-1.5 text-xs text-muted shadow-card backdrop-blur">
+                <span className="pulse-soft size-1.5 rounded-full bg-success" />
+                An autonomous career agent — live now
+              </p>
+            </Reveal>
+            <HeroHeadline />
+            <Reveal delay={0.5}>
+              <p className="mx-auto mt-8 max-w-xl text-balance text-lg leading-relaxed text-muted">
+                One run: your CV rewritten for the role you want — in any industry —
+                your best-fit jobs ranked, and a scored mock interview. No humans in
+                the loop. Just Ada, working in minutes.
+              </p>
+            </Reveal>
+            <Reveal delay={0.6}>
+              <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+                <Link href="/app/new">
+                  <Button className="group !px-8 !py-4 text-base">
+                    Start your run
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
+                </Link>
+                <Link
+                  href="/app/voice"
+                  className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+                >
+                  or talk to Ada first
+                </Link>
+              </div>
+            </Reveal>
+            <Reveal delay={0.7}>
+              <dl className="mx-auto mt-12 flex max-w-lg items-start justify-center gap-10 sm:gap-14">
+                {HERO_STATS.map(([value, label]) => (
+                  <div key={label} className="text-center">
+                    <dt className="sr-only">{label}</dt>
+                    <dd className="display text-3xl sm:text-4xl">{value}</dd>
+                    <dd className="mt-1.5 max-w-[8rem] text-xs leading-snug text-muted">
+                      {label}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </Reveal>
+            <Reveal delay={0.35} className="mt-16">
+              <HeroShowcase />
             </Reveal>
           </div>
         </section>
 
-        {/* Roles ticker */}
-        <RoleTicker roles={TICKER_ROLES} />
+        {/* Every-career band */}
+        <CareersBand />
 
         {/* Problem band */}
-        <section className="bg-ink py-24 text-bg">
+        <section className="bg-ink py-28 text-bg">
           <div className="mx-auto max-w-4xl px-5">
             <Reveal>
               <p className="eyebrow mb-6 !text-bg/50">The problem</p>
@@ -185,46 +168,46 @@ export default function Landing() {
                   Rewriting your CV for every role. Guessing what recruiters search for.
                   Walking into interviews cold.
                 </span>{" "}
-                Ada does all of it — in one run.
+                Ada does all of it — in <em className="text-accent">one run</em>.
               </p>
             </Reveal>
           </div>
         </section>
 
         {/* Capabilities */}
-        <section className="mx-auto max-w-6xl px-5 py-24">
+        <section className="mx-auto max-w-6xl scroll-mt-24 px-5 py-28">
           <Reveal>
             <Eyebrow>What you get</Eyebrow>
-            <h2 className="display fluid-h2 mb-12">One payment. Three deliverables.</h2>
+            <h2 className="display fluid-h2 mb-14">One payment. Three deliverables.</h2>
           </Reveal>
           <div className="grid gap-6 md:grid-cols-3">
             <Reveal delay={0.05}>
               <Card hover className="h-full p-6">
+                <p className="eyebrow mb-4 !text-[10px]">01 · Rewrite</p>
                 <div className="prose-ada mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
                   <p className="font-semibold">Summary</p>
                   <p className="text-muted">
-                    Backend engineer with 5 years building payment systems…
+                    Registered nurse with 6 years across A&amp;E and post-op recovery…
                   </p>
                   <p className="mt-2 font-semibold">Experience</p>
-                  <p>
-                    · Cut API p99 latency 43% by re-architecting the checkout path
-                  </p>
-                  <p>· Led idempotent payouts handling ₦2B+ monthly</p>
+                  <p>· Cut triage-to-treatment time 30% by redesigning intake flow</p>
+                  <p>· Mentored a 12-nurse night team across two wards</p>
                 </div>
                 <h3 className="mb-1.5 font-semibold">CV rewrite, for the role</h3>
                 <p className="text-sm leading-relaxed text-muted">
-                  ATS-safe headers, recruiter vocabulary, duties turned into achievement
-                  bullets. Your facts only — sharpened, never invented.
+                  ATS-safe headers, your industry&apos;s vocabulary, duties turned into
+                  achievement bullets. Your facts only — sharpened, never invented.
                 </p>
               </Card>
             </Reveal>
             <Reveal delay={0.1}>
               <Card hover className="h-full p-6">
+                <p className="eyebrow mb-4 !text-[10px]">02 · Match</p>
                 <div className="mb-5 space-y-3 rounded-xl border border-line bg-bg p-4">
                   {[
-                    ["Senior Backend Engineer", 92],
-                    ["Platform Engineer", 87],
-                    ["Engineering Manager", 81],
+                    ["Marketing Manager", 91],
+                    ["Brand Manager", 86],
+                    ["Growth Lead", 82],
                   ].map(([title, score]) => (
                     <div key={title as string}>
                       <div className="flex justify-between text-[12px]">
@@ -246,17 +229,18 @@ export default function Landing() {
             </Reveal>
             <Reveal delay={0.15}>
               <Card hover className="h-full p-6">
+                <p className="eyebrow mb-4 !text-[10px]">03 · Rehearse</p>
                 <div className="mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
                   <p className="text-muted">
-                    “Tell me about a migration you led under time pressure.”
+                    “Tell me about a time you turned around an unhappy client.”
                   </p>
                   <div className="mt-3 flex items-center gap-2">
                     <ScoreBar value={8} max={10} />
                     <span className="display shrink-0 text-base">8/10</span>
                   </div>
                   <p className="mt-2 text-muted">
-                    Strong structure and metrics. Add the stakeholder conflict you
-                    resolved.
+                    Clear story, strong result. Say how big the account you saved was —
+                    numbers land.
                   </p>
                 </div>
                 <h3 className="mb-1.5 font-semibold">A scored mock interview</h3>
@@ -270,17 +254,17 @@ export default function Landing() {
         </section>
 
         {/* How it works */}
-        <section id="how" className="border-y border-line bg-surface py-24">
+        <section id="how" className="scroll-mt-24 border-y border-line bg-surface py-28">
           <div className="mx-auto max-w-6xl px-5">
             <Reveal>
               <Eyebrow>How it works</Eyebrow>
-              <h2 className="display fluid-h2 mb-12">From CV to prepared, in five steps.</h2>
+              <h2 className="display fluid-h2 mb-14">From CV to prepared, in five steps.</h2>
             </Reveal>
             <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {STEPS.map((step, i) => (
                 <Reveal key={step.title} delay={i * 0.04}>
-                  <div className="border-t-2 border-line pt-5 transition-colors hover:border-accent">
-                    <p className="display mb-3 text-4xl text-accent">
+                  <div className="group border-t-2 border-line pt-5 transition-colors hover:border-accent">
+                    <p className="display mb-3 text-4xl text-accent/80 transition-colors group-hover:text-accent">
                       {String(i + 1).padStart(2, "0")}
                     </p>
                     <h3 className="mb-1.5 font-semibold">{step.title}</h3>
@@ -304,7 +288,7 @@ export default function Landing() {
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="mx-auto max-w-6xl px-5 py-24">
+        <section id="pricing" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-28">
           <div className="grid items-start gap-12 lg:grid-cols-2">
             <Reveal>
               <Eyebrow>Pricing</Eyebrow>
@@ -360,7 +344,7 @@ export default function Landing() {
         </section>
 
         {/* FAQs */}
-        <section id="faqs" className="border-t border-line bg-surface py-24">
+        <section id="faqs" className="scroll-mt-24 border-t border-line bg-surface py-28">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[1fr_2fr]">
             <Reveal>
               <Eyebrow>Questions</Eyebrow>
@@ -387,18 +371,21 @@ export default function Landing() {
         </section>
 
         {/* CTA band */}
-        <section className="relative overflow-hidden bg-ink py-28 text-center text-bg">
+        <section className="relative overflow-hidden bg-ink py-32 text-center text-bg">
           <div
-            className="absolute left-1/2 top-0 -z-0 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
+            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
             aria-hidden
           />
           <Reveal className="relative">
-            <h2 className="display fluid-h2 mx-auto max-w-2xl px-5">
-              The next role is already out there. Go in{" "}
-              <em className="text-accent">prepared</em>.
+            <h2 className="display fluid-hero mx-auto max-w-3xl px-5">
+              Go in <em className="text-accent">prepared</em>.
             </h2>
-            <Link href="/app/new" className="mt-8 inline-block">
-              <Button className="group !bg-bg !px-8 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
+            <p className="mx-auto mt-5 max-w-md px-5 text-balance text-bg/60">
+              The next role is already out there. Ada gets you ready for it — whatever
+              the industry.
+            </p>
+            <Link href="/app/new" className="mt-9 inline-block">
+              <Button className="group !bg-bg !px-9 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
                 Start your run
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
@@ -410,14 +397,14 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="border-t border-line">
-        <div className="mx-auto max-w-6xl px-5 py-10">
+      <footer className="overflow-hidden border-t border-line">
+        <div className="mx-auto max-w-6xl px-5 pt-10">
           <div className="flex flex-wrap items-start justify-between gap-8">
             <div>
               <Logo className="text-base" />
               <p className="mt-2 max-w-xs text-xs leading-relaxed text-muted">
                 An autonomous career agent — no human reads your CV. Rewrite, match,
-                rehearse. One run at a time.
+                rehearse. One run at a time, for every industry.
               </p>
             </div>
             <nav className="flex gap-10 text-xs text-muted">
@@ -437,6 +424,12 @@ export default function Landing() {
           </div>
           <p className="mt-8 border-t border-line pt-6 text-xs text-muted">
             © {new Date().getFullYear()} Ada · Built for the next role, not the last one.
+          </p>
+        </div>
+        {/* Oversized wordmark, cropped by the viewport */}
+        <div className="pointer-events-none select-none" aria-hidden>
+          <p className="display -mb-[0.24em] text-center text-[26vw] leading-[0.8] text-ink/[0.045]">
+            Ada.
           </p>
         </div>
       </footer>

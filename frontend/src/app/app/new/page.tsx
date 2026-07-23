@@ -113,7 +113,7 @@ function NewRun() {
               id="role"
               required
               minLength={2}
-              placeholder="Senior Backend Engineer"
+              placeholder="e.g. Sales Manager, Registered Nurse, Accountant"
               value={role}
               onChange={(e) => setRole(e.target.value)}
             />

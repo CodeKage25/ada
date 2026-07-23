@@ -83,6 +83,20 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Film-grain overlay: barely-there texture that keeps large flat areas warm */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark body::after {
+  opacity: 0.05;
+}
+
 ::selection {
   background: var(--accent);
   color: var(--accent-ink);
@@ -104,9 +118,13 @@ body {
 }
 
 /* Fluid type: scales continuously with viewport, no breakpoint jumps */
-.fluid-hero { font-size: clamp(2.8rem, 7vw + 0.8rem, 5.4rem); }
-.fluid-h2 { font-size: clamp(1.9rem, 3vw + 0.8rem, 2.8rem); }
-.fluid-band { font-size: clamp(1.5rem, 2.8vw + 0.7rem, 2.5rem); }
+.fluid-hero {
+  font-size: clamp(3rem, 7.5vw + 1rem, 6.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.fluid-h2 { font-size: clamp(2rem, 3.2vw + 0.8rem, 3.1rem); }
+.fluid-band { font-size: clamp(1.6rem, 3vw + 0.7rem, 2.7rem); }
 
 /* Small-caps section eyebrow */
 .eyebrow {
@@ -176,7 +194,8 @@ body {
   animation: shimmer 1.6s linear infinite;
 }
 
-/* Continuous role ticker on the landing page */
+/* Continuous role tickers on the landing page; the reverse row scrolls the
+   other way so the two lanes slide past each other. */
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -184,8 +203,16 @@ body {
 .marquee-track {
   display: flex;
   width: max-content;
-  animation: marquee 36s linear infinite;
+  animation: marquee 44s linear infinite;
 }
+.marquee-reverse { animation-direction: reverse; }
+
+/* Slow vertical drift for the floating proof chips in the hero */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+.float-y { animation: float-y 5.5s ease-in-out infinite; }
 
 /* Concentric "listening" rings on the voice page */
 @keyframes ring-ping {
@@ -203,6 +230,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .pulse-soft, .skeleton, .marquee-track, .ring-ping, .caret-blink { animation: none; }
+  .pulse-soft, .skeleton, .marquee-track, .ring-ping, .caret-blink, .float-y {
+    animation: none;
+  }
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
