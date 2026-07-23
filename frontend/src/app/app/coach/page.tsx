@@ -34,6 +34,19 @@ export default function CoachPage() {
     api.getProfile().then((p) => setHasProfile(p !== null)).catch(() => setHasProfile(false));
   }, []);
 
+  // A question handed over from the dashboard's "Ask Ada anything" box.
+  const handedOff = useRef(false);
+  useEffect(() => {
+    if (handedOff.current) return;
+    handedOff.current = true;
+    const q = localStorage.getItem("ada.coach-ask");
+    if (q) {
+      localStorage.removeItem("ada.coach-ask");
+      void send(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);

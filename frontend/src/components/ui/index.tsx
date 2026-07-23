@@ -178,6 +178,68 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`skeleton ${className}`} aria-hidden />;
 }
 
+/** Radial gauge: an accent ring that draws itself in on mount. Children render
+ *  centered inside — pair a serif number with a quiet unit. */
+export function ScoreRing({
+  value,
+  max = 100,
+  size = 96,
+  stroke = 7,
+  className = "",
+  children,
+}: {
+  value: number;
+  max?: number;
+  size?: number;
+  stroke?: number;
+  className?: string;
+  children?: React.ReactNode;
+}) {
+  const [drawn, setDrawn] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setDrawn(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(1, value / max));
+  return (
+    <div
+      className={`relative inline-flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={`${value} out of ${max}`}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--line)"
+          strokeWidth={stroke}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - (drawn ? pct : 0))}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dashoffset 1.1s cubic-bezier(0.21, 0.6, 0.35, 1)" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /** Horizontal 0-100 meter used for match percentages and interview scores. */
 export function ScoreBar({ value, max = 100 }: { value: number; max?: number }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
