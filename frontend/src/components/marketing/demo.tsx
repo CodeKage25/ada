@@ -507,7 +507,12 @@ export function CareersBand() {
           Not just tech. <em className="text-accent">Every</em> industry.
         </p>
       </Reveal>
-      <div className="relative space-y-3">
+      {/* The moving lanes are decorative; screen readers get one sentence. */}
+      <p className="sr-only">
+        Ada works for every career — nurses, teachers, salespeople, lawyers, chefs,
+        engineers, designers, and more.
+      </p>
+      <div className="relative space-y-3" aria-hidden>
         <CareerLane roles={CAREERS_A} />
         <CareerLane roles={CAREERS_B} reverse />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-surface to-transparent" />

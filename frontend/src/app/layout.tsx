@@ -11,6 +11,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  // Absolute URLs for OG/Twitter cards; set NEXT_PUBLIC_SITE_URL in prod.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
     default: "Ada — the career agent that gets you hired",
     template: "%s · Ada",

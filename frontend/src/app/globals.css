@@ -109,6 +109,14 @@ body::after {
   border-radius: 4px;
 }
 
+/* Buttons ship with cursor: default in browsers — every enabled control here
+   is genuinely clickable, so say so. */
+button:not(:disabled),
+summary,
+[role="tab"] {
+  cursor: pointer;
+}
+
 /* Editorial display headlines */
 .display {
   font-family: var(--font-serif);
