@@ -19,4 +19,5 @@ next-env.d.ts
 Claude.md
 CLAUDE.md
 tasks/
-.claude/
+.claude/*
+!.claude/skills/
