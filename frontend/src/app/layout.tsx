@@ -13,7 +13,7 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: "Ada — the career agent that gets you hired",
   description:
-    "Ada rewrites your CV for the role you want, finds your best-fit jobs, and coaches you through the interview. One agent, end to end.",
+    "Ada rewrites your CV for the role you want — in any industry — finds your best-fit jobs, and coaches you through the interview. One agent, end to end.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -10,7 +10,7 @@ import { api, streamChat, type ChatMessage } from "@/lib/api";
 const SUGGESTIONS = [
   "Review my career trajectory",
   "What roles should I target next?",
-  "How do I position my experience for a senior role?",
+  "How do I switch industries without starting over?",
   "Help me plan a salary negotiation",
 ];
 

@@ -8,6 +8,7 @@ import {
   Plus,
   UserRound,
 } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
@@ -166,7 +167,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <main className="flex-1 px-6 pb-28 pt-8 max-lg:pt-20 lg:ml-60 lg:px-10 lg:pb-16">
-          <div className="mx-auto max-w-3xl">{children}</div>
+          {/* Keyed by route so every page glides in */}
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.21, 0.6, 0.35, 1] }}
+            className="mx-auto max-w-3xl"
+          >
+            {children}
+          </motion.div>
         </main>
       </div>
     </AuthContext.Provider>
