@@ -4,7 +4,7 @@ import { Mic, MicOff, PhoneOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
 import { voiceWsUrl } from "@/lib/api";
 import { startMic, type MicSession } from "@/lib/audio";
 
@@ -96,11 +96,10 @@ export default function VoicePage() {
 
   return (
     <>
-      <h1 className="display mb-2 text-3xl">Talk to Ada.</h1>
-      <p className="mb-8 text-sm text-muted">
-        A short spoken intake — Ada asks about your background and target role, then
-        drafts your run for you.
-      </p>
+      <PageHeader
+        title="Talk to Ada."
+        subtitle="A short spoken intake — Ada asks about your background and target role, then drafts your run for you."
+      />
 
       <Card className="flex flex-col items-center gap-6 p-10">
         {state === "idle" || state === "error" ? (
@@ -109,10 +108,12 @@ export default function VoicePage() {
               <Mic className="size-8 text-accent" />
             </div>
             {error && <p className="text-center text-sm text-danger">{error}</p>}
-            <Button onClick={start}>Start the conversation</Button>
+            <Button onClick={start} className="!px-7 !py-3">
+              Start the conversation
+            </Button>
             <p className="text-center text-xs text-muted">
               Uses your microphone. Prefer typing? Use{" "}
-              <a href="/app/new" className="underline">
+              <a href="/app/new" className="underline underline-offset-2 transition-colors hover:text-ink">
                 the form
               </a>
               .
@@ -120,16 +121,30 @@ export default function VoicePage() {
           </>
         ) : (
           <>
-            <div
-              className={`flex size-20 items-center justify-center rounded-full ${
-                state === "live" ? "pulse-soft bg-accent text-accent-ink" : "bg-accent-soft text-accent"
-              }`}
-            >
-              {state === "connecting" ? (
-                <MicOff className="size-8" />
-              ) : (
-                <Mic className="size-8" />
+            <div className="relative flex size-24 items-center justify-center">
+              {state === "live" && (
+                <>
+                  <span className="ring-ping absolute inset-2 rounded-full border-2 border-accent" aria-hidden />
+                  <span
+                    className="ring-ping absolute inset-2 rounded-full border-2 border-accent"
+                    style={{ animationDelay: "0.6s" }}
+                    aria-hidden
+                  />
+                </>
               )}
+              <div
+                className={`relative flex size-20 items-center justify-center rounded-full ${
+                  state === "live"
+                    ? "bg-accent text-accent-ink shadow-btn"
+                    : "pulse-soft bg-accent-soft text-accent"
+                }`}
+              >
+                {state === "connecting" ? (
+                  <MicOff className="size-8" />
+                ) : (
+                  <Mic className="size-8" />
+                )}
+              </div>
             </div>
             <p className="text-sm text-muted">
               {state === "connecting" && "Connecting to Ada..."}
@@ -139,6 +154,7 @@ export default function VoicePage() {
             {transcript && (
               <div className="max-h-48 w-full overflow-y-auto rounded-xl border border-line bg-bg p-4 text-sm leading-relaxed quiet-scroll">
                 {transcript}
+                <span className="caret-blink text-accent">▎</span>
               </div>
             )}
             <Button variant="danger" onClick={end} disabled={state === "extracting"}>

@@ -7,8 +7,33 @@ import { Suspense, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { RunProgress } from "@/components/run/progress";
-import { Button, Card, ScoreBar, Spinner } from "@/components/ui";
+import { Button, Card, PageHeader, ScoreBar, Skeleton } from "@/components/ui";
 import { api, type RunResult } from "@/lib/api";
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-muted">
+      <span className="h-px w-6 bg-accent" aria-hidden />
+      {children}
+    </h2>
+  );
+}
+
+function RunSkeleton() {
+  return (
+    <div>
+      <Skeleton className="h-9 w-64" />
+      <Skeleton className="mt-3 h-4 w-44" />
+      <Card className="mt-8 space-y-3 p-6">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-4/6" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/6" />
+      </Card>
+    </div>
+  );
+}
 
 function RunDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,7 +50,7 @@ function RunDetail() {
   }, [id]);
 
   if (missing) return <p className="text-sm text-muted">Run not found.</p>;
-  if (!run) return <Spinner label="Loading run..." />;
+  if (!run) return <RunSkeleton />;
 
   // Arrived from Stripe success or still executing: show live progress.
   if (run.status !== "complete" && run.status !== "failed") {
@@ -66,17 +91,21 @@ function RunDetail() {
 
   return (
     <>
-      <h1 className="display mb-1 text-3xl">{run.target_role}.</h1>
-      <p className="mb-8 text-sm text-muted">Your complete run — CV, matches, interview.</p>
+      <PageHeader
+        title={`${run.target_role}.`}
+        subtitle="Your complete run — CV, matches, interview."
+      />
 
-      <section className="mb-8">
+      <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            ATS-optimised CV
-          </h2>
+          <SectionTitle>ATS-optimised CV</SectionTitle>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={copyCv} className="!px-3 !py-1.5 text-xs">
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              {copied ? (
+                <Check className="size-3.5 text-success" />
+              ) : (
+                <Copy className="size-3.5" />
+              )}
               {copied ? "Copied" : "Copy"}
             </Button>
             <Button
@@ -88,23 +117,23 @@ function RunDetail() {
             </Button>
           </div>
         </div>
-        <Card className="prose-ada max-h-[32rem] overflow-y-auto p-6 quiet-scroll">
+        <Card className="prose-ada max-h-[32rem] overflow-y-auto p-6 quiet-scroll sm:p-8">
           <ReactMarkdown>{run.rewritten_cv ?? ""}</ReactMarkdown>
         </Card>
       </section>
 
       {run.matches && run.matches.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-            Best-fit roles
-          </h2>
+        <section className="mb-10">
+          <div className="mb-3">
+            <SectionTitle>Best-fit roles</SectionTitle>
+          </div>
           <div className="space-y-3">
             {run.matches.map((m, i) => (
-              <Card key={i} className="px-5 py-4">
+              <Card key={i} hover className="px-5 py-4">
                 <div className="flex items-baseline justify-between gap-4">
                   <div>
                     <p className="font-medium">{m.title}</p>
-                    <p className="text-xs text-muted">
+                    <p className="mt-0.5 text-xs text-muted">
                       {m.company} · {m.location}
                     </p>
                   </div>
@@ -113,7 +142,7 @@ function RunDetail() {
                 <div className="mt-3">
                   <ScoreBar value={m.match} />
                 </div>
-                <p className="mt-2 text-xs text-muted">{m.reason}</p>
+                <p className="mt-2.5 text-xs leading-relaxed text-muted">{m.reason}</p>
               </Card>
             ))}
           </div>
@@ -122,24 +151,30 @@ function RunDetail() {
 
       {run.questions && run.questions.length > 0 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted">
-            Mock interview
-          </h2>
+          <div className="mb-3">
+            <SectionTitle>Mock interview</SectionTitle>
+          </div>
           <Card className="p-6">
             {run.interview ? (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Interview scored</p>
-                  <p className="text-sm text-muted">
-                    Overall {run.interview.overall_score}/10 — view your feedback.
-                  </p>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="display text-4xl text-accent">
+                    {run.interview.overall_score}
+                    <span className="text-lg text-muted">/10</span>
+                  </span>
+                  <div>
+                    <p className="font-medium">Interview scored</p>
+                    <p className="text-sm text-muted">
+                      View your question-by-question feedback.
+                    </p>
+                  </div>
                 </div>
                 <Link href={`/app/runs/${id}/interview`}>
                   <Button variant="secondary">Review feedback</Button>
                 </Link>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <p className="font-medium">
                     {run.questions.length} questions tailored to this role

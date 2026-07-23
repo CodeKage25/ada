@@ -76,37 +76,70 @@ export function RunProgress({ runId }: { runId: string }) {
     );
   }
 
+  const complete = status === "complete";
+  const pct = complete ? 100 : ((stage + 0.5) / STAGES.length) * 100;
+
   return (
-    <Card className="p-6">
-      <p className="display mb-5 text-xl">Ada is working on it.</p>
-      <ol className="space-y-4">
-        {STAGES.map((s, i) => {
-          const done = i < stage || status === "complete";
-          const active = i === stage && status !== "complete";
-          return (
-            <li key={s.key} className="flex items-center gap-3">
-              <span
-                className={`flex size-6 items-center justify-center rounded-full border text-[11px] ${
-                  done
-                    ? "border-accent bg-accent text-accent-ink"
-                    : active
-                      ? "border-accent text-accent"
-                      : "border-line text-muted"
-                }`}
-              >
-                {done ? <Check className="size-3.5" /> : i + 1}
-              </span>
-              <span
-                className={`text-sm ${
-                  done ? "text-ink" : active ? "pulse-soft text-ink" : "text-muted"
-                }`}
-              >
-                {s.label}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+    <Card className="overflow-hidden">
+      <div className="h-1 bg-line">
+        <div
+          className="h-full bg-gradient-to-r from-accent/70 to-accent transition-all duration-700 ease-out"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="p-6">
+        <div className="mb-6 flex items-baseline justify-between">
+          <p className="display text-xl">
+            {complete ? "Done — opening your results." : "Ada is working on it."}
+          </p>
+          <p className="text-xs text-muted">
+            {complete ? "" : "Usually under 3 minutes"}
+          </p>
+        </div>
+        <ol>
+          {STAGES.map((s, i) => {
+            const done = i < stage || complete;
+            const active = i === stage && !complete;
+            const lastStage = i === STAGES.length - 1;
+            return (
+              <li key={s.key} className="flex gap-3.5">
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border text-[11px] transition-colors duration-300 ${
+                      done
+                        ? "border-accent bg-accent text-accent-ink"
+                        : active
+                          ? "border-accent text-accent"
+                          : "border-line text-muted"
+                    }`}
+                  >
+                    {done ? (
+                      <Check className="size-3.5" />
+                    ) : active ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      i + 1
+                    )}
+                  </span>
+                  {!lastStage && (
+                    <span
+                      className={`w-px flex-1 ${done ? "bg-accent" : "bg-line"}`}
+                      aria-hidden
+                    />
+                  )}
+                </div>
+                <span
+                  className={`pb-5 pt-0.5 text-sm ${
+                    done ? "text-ink" : active ? "pulse-soft text-ink" : "text-muted"
+                  }`}
+                >
+                  {s.label}
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </Card>
   );
 }

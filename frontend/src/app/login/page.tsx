@@ -34,19 +34,28 @@ function LoginForm() {
   };
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center px-4">
+    <main className="glow-field relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4">
+      <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
       <Link href="/" className="mb-10">
         <Logo className="text-3xl" />
       </Link>
-      <Card className="w-full max-w-sm p-8">
+      <Card className="w-full max-w-sm p-8 shadow-lift">
         {sent ? (
           <div className="flex flex-col items-center gap-3 text-center">
-            <MailCheck className="size-8 text-accent" />
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-accent-soft">
+              <MailCheck className="size-6 text-accent" />
+            </span>
             <h1 className="display text-2xl">Check your inbox</h1>
-            <p className="text-sm text-muted">
+            <p className="text-sm leading-relaxed text-muted">
               A one-time sign-in link is on its way to <strong>{email}</strong>. It
               expires in 15 minutes.
             </p>
+            <button
+              onClick={() => setSent(false)}
+              className="mt-1 text-xs text-muted underline underline-offset-2 transition-colors hover:text-ink"
+            >
+              Use a different email
+            </button>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -69,15 +78,14 @@ function LoginForm() {
               />
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
-            <Button type="submit" loading={busy} className="w-full">
-              Email me a link <ArrowRight className="size-4" />
+            <Button type="submit" loading={busy} className="group w-full">
+              Email me a link
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </form>
         )}
       </Card>
-      <p className="mt-6 text-xs text-muted">
-        New here? The same link signs you up.
-      </p>
+      <p className="mt-6 text-xs text-muted">New here? The same link signs you up.</p>
     </main>
   );
 }

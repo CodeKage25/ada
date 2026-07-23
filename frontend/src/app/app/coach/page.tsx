@@ -14,6 +14,14 @@ const SUGGESTIONS = [
   "Help me plan a salary negotiation",
 ];
 
+function AdaMark() {
+  return (
+    <span className="display mt-0.5 flex size-7 shrink-0 select-none items-center justify-center rounded-full bg-accent-soft text-[13px] text-accent">
+      A
+    </span>
+  );
+}
+
 export default function CoachPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -70,13 +78,17 @@ export default function CoachPage() {
     }
   };
 
+  const empty = messages.length === 0;
+
   return (
-    <div className="flex h-[calc(100dvh-8rem)] flex-col">
-      <h1 className="display mb-2 text-3xl">Ask Ada.</h1>
-      <p className="mb-4 text-sm text-muted">
-        Career advice grounded in your profile and your runs — not generic tips.
-      </p>
-      {hasProfile === false && (
+    <div className="flex h-[calc(100dvh-9rem)] flex-col lg:h-[calc(100dvh-7rem)]">
+      {!empty && (
+        <div className="mb-4 flex items-baseline justify-between border-b border-line pb-4">
+          <h1 className="display text-2xl">Ask Ada.</h1>
+          <p className="text-xs text-muted">Grounded in your profile and runs</p>
+        </div>
+      )}
+      {hasProfile === false && !empty && (
         <p className="mb-4 rounded-xl bg-accent-soft px-4 py-3 text-sm text-accent">
           Ada gives sharper advice when she knows your background —{" "}
           <Link href="/app/profile" className="underline">
@@ -86,34 +98,54 @@ export default function CoachPage() {
         </p>
       )}
 
-      <div className="flex-1 space-y-5 overflow-y-auto pb-4 quiet-scroll">
-        {messages.length === 0 && (
-          <div className="flex flex-wrap gap-2 pt-2">
-            {SUGGESTIONS.map((s) => (
-              <button
-                key={s}
-                onClick={() => void send(s)}
-                className="rounded-full border border-line px-4 py-2 text-sm text-muted transition-colors hover:border-accent hover:text-accent"
-              >
-                {s}
-              </button>
-            ))}
+      <div className="flex-1 space-y-6 overflow-y-auto pb-4 quiet-scroll">
+        {empty && (
+          <div className="flex h-full flex-col items-center justify-center text-center">
+            <h1 className="display text-4xl">
+              What&apos;s on your <em className="text-accent">mind</em>?
+            </h1>
+            <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted">
+              Career advice grounded in your profile and your runs — not generic tips.
+            </p>
+            {hasProfile === false && (
+              <p className="mt-4 rounded-xl bg-accent-soft px-4 py-2.5 text-xs text-accent">
+                Sharper advice when Ada knows your background —{" "}
+                <Link href="/app/profile" className="underline">
+                  import your profile
+                </Link>
+                .
+              </p>
+            )}
+            <div className="mt-8 flex max-w-md flex-wrap justify-center gap-2">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => void send(s)}
+                  className="rounded-full border border-line bg-surface px-4 py-2 text-sm text-muted shadow-card transition-all hover:-translate-y-px hover:border-accent hover:text-accent"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
+          <div key={i} className={m.role === "user" ? "flex justify-end" : "flex gap-3"}>
             {m.role === "user" ? (
-              <p className="max-w-[85%] rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm text-accent-ink">
+              <p className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm text-accent-ink">
                 {m.content}
               </p>
             ) : (
-              <div className="prose-ada max-w-[92%]">
-                {m.content ? (
-                  <ReactMarkdown>{m.content}</ReactMarkdown>
-                ) : (
-                  <span className="pulse-soft text-sm text-muted">Ada is thinking…</span>
-                )}
-              </div>
+              <>
+                <AdaMark />
+                <div className="prose-ada max-w-[88%] pt-0.5">
+                  {m.content ? (
+                    <ReactMarkdown>{m.content}</ReactMarkdown>
+                  ) : (
+                    <span className="pulse-soft text-sm text-muted">Ada is thinking…</span>
+                  )}
+                </div>
+              </>
             )}
           </div>
         ))}
@@ -125,40 +157,45 @@ export default function CoachPage() {
           e.preventDefault();
           void send(input);
         }}
-        className="flex items-end gap-2 border-t border-line pt-4"
+        className="pt-2"
       >
-        <textarea
-          rows={1}
-          placeholder="Ask Ada anything about your career..."
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void send(input);
-            }
-          }}
-          className="max-h-40 flex-1 resize-none rounded-2xl border border-line bg-surface px-4 py-3 text-sm outline-none quiet-scroll focus:border-accent"
-        />
-        {streaming ? (
-          <button
-            type="button"
-            onClick={() => abortRef.current?.abort()}
-            aria-label="Stop"
-            className="rounded-full bg-ink p-3 text-bg"
-          >
-            <Square className="size-4" />
-          </button>
-        ) : (
-          <button
-            type="submit"
-            aria-label="Send"
-            disabled={!input.trim()}
-            className="rounded-full bg-accent p-3 text-accent-ink disabled:opacity-40"
-          >
-            <ArrowUp className="size-4" />
-          </button>
-        )}
+        <div className="flex items-end gap-2 rounded-3xl border border-line bg-surface p-2 shadow-card transition-colors focus-within:border-accent">
+          <textarea
+            rows={1}
+            placeholder="Ask Ada anything about your career..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void send(input);
+              }
+            }}
+            className="max-h-40 flex-1 resize-none bg-transparent px-3 py-2 text-sm outline-none quiet-scroll placeholder:text-muted/70"
+          />
+          {streaming ? (
+            <button
+              type="button"
+              onClick={() => abortRef.current?.abort()}
+              aria-label="Stop"
+              className="rounded-full bg-ink p-2.5 text-bg transition-transform hover:scale-105"
+            >
+              <Square className="size-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              aria-label="Send"
+              disabled={!input.trim()}
+              className="rounded-full bg-accent p-2.5 text-accent-ink shadow-btn transition-transform hover:scale-105 disabled:opacity-40 disabled:shadow-none"
+            >
+              <ArrowUp className="size-4" />
+            </button>
+          )}
+        </div>
+        <p className="mt-2 text-center text-[11px] text-muted/70">
+          Enter to send · Shift+Enter for a new line
+        </p>
       </form>
     </div>
   );

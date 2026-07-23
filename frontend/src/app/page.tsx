@@ -1,8 +1,23 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
-import { HeroDemo, Reveal } from "@/components/marketing/demo";
-import { Button, Card, Logo, ScoreBar, ThemeToggle } from "@/components/ui";
+import { HeroDemo, Reveal, RoleTicker } from "@/components/marketing/demo";
+import { Button, Card, Eyebrow, Logo, ScoreBar, ThemeToggle } from "@/components/ui";
+
+const TICKER_ROLES = [
+  "Senior Backend Engineer",
+  "Product Manager",
+  "Data Analyst",
+  "Frontend Engineer",
+  "DevOps Engineer",
+  "UX Designer",
+  "Engineering Manager",
+  "Growth Marketer",
+  "Solutions Architect",
+  "Business Analyst",
+  "Mobile Engineer",
+  "Technical Writer",
+];
 
 const STEPS = [
   {
@@ -54,24 +69,35 @@ const FAQS = [
   },
 ];
 
+const HERO_STATS = [
+  ["<3 min", "from payment to results"],
+  ["1", "payment — no subscription"],
+  ["0", "humans in the loop"],
+] as const;
+
 function Nav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-        <Logo />
+        <Link href="/" aria-label="Ada home">
+          <Logo />
+        </Link>
         <nav className="flex items-center gap-1 text-sm text-muted max-sm:hidden">
-          <a href="#how" className="rounded-full px-3 py-1.5 hover:text-ink">
+          <a href="#how" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
             How it works
           </a>
-          <a href="#pricing" className="rounded-full px-3 py-1.5 hover:text-ink">
+          <a href="#pricing" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
             Pricing
           </a>
-          <a href="#faqs" className="rounded-full px-3 py-1.5 hover:text-ink">
+          <a href="#faqs" className="rounded-full px-3 py-1.5 transition-colors hover:text-ink">
             FAQs
           </a>
         </nav>
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <Link href="/login" className="text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
+            Sign in
+          </Link>
           <Link href="/app">
             <Button className="!py-2 text-[13px]">Open Ada</Button>
           </Link>
@@ -87,54 +113,72 @@ export default function Landing() {
       <Nav />
       <main>
         {/* Hero */}
-        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-24 pt-20 lg:grid-cols-[1.15fr_1fr]">
-          <div>
-            <Reveal>
-              <p className="mb-5 inline-block rounded-full border border-line px-3.5 py-1.5 text-xs text-muted">
-                An autonomous career agent — live now
-              </p>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h1 className="display fluid-hero">
-                Meet Ada.
-                <br />
-                She gets you <em className="text-accent">hired</em>.
-              </h1>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
-                One run: your CV rewritten for the role you want, your best-fit jobs
-                ranked, and a scored mock interview. No humans in the loop — just Ada,
-                working in minutes.
-              </p>
-            </Reveal>
-            <Reveal delay={0.15}>
-              <div className="mt-8 flex flex-wrap items-center gap-4">
-                <Link href="/app/new">
-                  <Button className="!px-7 !py-3.5 text-base">
-                    Start your run <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
-                <Link href="/app/voice" className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline">
-                  or talk to Ada first
-                </Link>
-              </div>
-            </Reveal>
-            <Reveal delay={0.2}>
-              <p className="mt-8 text-xs text-muted">
-                ₦2,000 / $15 per run · No subscription · Results in minutes
-              </p>
+        <section className="glow-field relative overflow-hidden">
+          <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
+          <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 pb-20 pt-20 lg:grid-cols-[1.15fr_1fr] lg:pt-24">
+            <div>
+              <Reveal>
+                <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-3.5 py-1.5 text-xs text-muted shadow-card backdrop-blur">
+                  <span className="pulse-soft size-1.5 rounded-full bg-success" />
+                  An autonomous career agent — live now
+                </p>
+              </Reveal>
+              <Reveal delay={0.05}>
+                <h1 className="display fluid-hero">
+                  Meet Ada.
+                  <br />
+                  She gets you <em className="text-accent">hired</em>.
+                </h1>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
+                  One run: your CV rewritten for the role you want, your best-fit jobs
+                  ranked, and a scored mock interview. No humans in the loop — just Ada,
+                  working in minutes.
+                </p>
+              </Reveal>
+              <Reveal delay={0.15}>
+                <div className="mt-8 flex flex-wrap items-center gap-4">
+                  <Link href="/app/new">
+                    <Button className="group !px-7 !py-3.5 text-base">
+                      Start your run
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Link>
+                  <Link
+                    href="/app/voice"
+                    className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+                  >
+                    or talk to Ada first
+                  </Link>
+                </div>
+              </Reveal>
+              <Reveal delay={0.2}>
+                <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-line pt-6">
+                  {HERO_STATS.map(([value, label]) => (
+                    <div key={label}>
+                      <dt className="sr-only">{label}</dt>
+                      <dd className="display text-2xl sm:text-3xl">{value}</dd>
+                      <dd className="mt-1 text-xs leading-snug text-muted">{label}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </Reveal>
+            </div>
+            <Reveal delay={0.15} className="flex justify-center lg:justify-end">
+              <HeroDemo />
             </Reveal>
           </div>
-          <Reveal delay={0.15} className="flex justify-center lg:justify-end">
-            <HeroDemo />
-          </Reveal>
         </section>
+
+        {/* Roles ticker */}
+        <RoleTicker roles={TICKER_ROLES} />
 
         {/* Problem band */}
         <section className="bg-ink py-24 text-bg">
           <div className="mx-auto max-w-4xl px-5">
             <Reveal>
+              <p className="eyebrow mb-6 !text-bg/50">The problem</p>
               <p className="display fluid-band leading-snug">
                 Job searching is a full-time job you didn&apos;t apply for.{" "}
                 <span className="opacity-50">
@@ -150,11 +194,12 @@ export default function Landing() {
         {/* Capabilities */}
         <section className="mx-auto max-w-6xl px-5 py-24">
           <Reveal>
+            <Eyebrow>What you get</Eyebrow>
             <h2 className="display fluid-h2 mb-12">One payment. Three deliverables.</h2>
           </Reveal>
           <div className="grid gap-6 md:grid-cols-3">
             <Reveal delay={0.05}>
-              <Card className="h-full p-6">
+              <Card hover className="h-full p-6">
                 <div className="prose-ada mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
                   <p className="font-semibold">Summary</p>
                   <p className="text-muted">
@@ -174,7 +219,7 @@ export default function Landing() {
               </Card>
             </Reveal>
             <Reveal delay={0.1}>
-              <Card className="h-full p-6">
+              <Card hover className="h-full p-6">
                 <div className="mb-5 space-y-3 rounded-xl border border-line bg-bg p-4">
                   {[
                     ["Senior Backend Engineer", 92],
@@ -200,7 +245,7 @@ export default function Landing() {
               </Card>
             </Reveal>
             <Reveal delay={0.15}>
-              <Card className="h-full p-6">
+              <Card hover className="h-full p-6">
                 <div className="mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
                   <p className="text-muted">
                     “Tell me about a migration you led under time pressure.”
@@ -228,24 +273,28 @@ export default function Landing() {
         <section id="how" className="border-y border-line bg-surface py-24">
           <div className="mx-auto max-w-6xl px-5">
             <Reveal>
+              <Eyebrow>How it works</Eyebrow>
               <h2 className="display fluid-h2 mb-12">From CV to prepared, in five steps.</h2>
             </Reveal>
-            <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {STEPS.map((step, i) => (
                 <Reveal key={step.title} delay={i * 0.04}>
-                  <p className="display mb-2 text-4xl text-accent">
-                    {String(i + 1).padStart(2, "0")}
-                  </p>
-                  <h3 className="mb-1.5 font-semibold">{step.title}</h3>
-                  <p className="text-sm leading-relaxed text-muted">{step.body}</p>
+                  <div className="border-t-2 border-line pt-5 transition-colors hover:border-accent">
+                    <p className="display mb-3 text-4xl text-accent">
+                      {String(i + 1).padStart(2, "0")}
+                    </p>
+                    <h3 className="mb-1.5 font-semibold">{step.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted">{step.body}</p>
+                  </div>
                 </Reveal>
               ))}
               <Reveal delay={0.2}>
                 <div className="flex h-full flex-col justify-between rounded-card bg-accent-soft p-6">
                   <p className="display text-2xl text-accent">Ready when you are.</p>
                   <Link href="/app/new" className="mt-4">
-                    <Button>
-                      Start a run <ArrowRight className="size-4" />
+                    <Button className="group">
+                      Start a run
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                     </Button>
                   </Link>
                 </div>
@@ -258,43 +307,54 @@ export default function Landing() {
         <section id="pricing" className="mx-auto max-w-6xl px-5 py-24">
           <div className="grid items-start gap-12 lg:grid-cols-2">
             <Reveal>
+              <Eyebrow>Pricing</Eyebrow>
               <h2 className="display fluid-h2 mb-4">Pay per run. Own the result.</h2>
               <p className="max-w-md text-muted">
                 No subscription, no retainer, no career-coach hourly rate. One price, one
                 complete run, yours forever in your account.
               </p>
-              <ul className="mt-8 space-y-3 text-sm">
+              <ul className="mt-8 space-y-3.5 text-sm">
                 {[
                   "CV rewrite + ranked matches + scored interview — all included",
                   "Ask Ada: unlimited coaching chat, grounded in your profile",
                   "Failed runs are never charged",
                 ].map((line) => (
-                  <li key={line} className="flex items-start gap-2.5">
-                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-accent" />
+                  <li key={line} className="flex items-start gap-3">
+                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft">
+                      <Check className="size-3 text-accent" />
+                    </span>
                     {line}
                   </li>
                 ))}
               </ul>
             </Reveal>
             <Reveal delay={0.1}>
-              <Card className="p-8">
-                <p className="text-sm font-medium text-muted">One run</p>
-                <div className="mt-2 flex items-baseline gap-3">
-                  <span className="display text-6xl">₦2,000</span>
-                  <span className="text-muted">/ $15 international</span>
-                </div>
-                <p className="mt-4 text-sm text-muted">
-                  Paystack for Nigeria · Cards worldwide via Stripe
-                </p>
-                <Link href="/app/new" className="mt-6 block">
-                  <Button className="w-full !py-3.5">
-                    Run Ada now <ArrowRight className="size-4" />
-                  </Button>
-                </Link>
-                <p className="mt-3 text-center text-xs text-muted">
-                  Results typically land in under 3 minutes.
-                </p>
-              </Card>
+              <div className="rounded-[calc(var(--radius)+3px)] bg-gradient-to-b from-accent/40 via-line to-line p-px shadow-lift">
+                <Card className="!border-0 p-8">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-muted">One run</p>
+                    <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
+                      Everything included
+                    </span>
+                  </div>
+                  <div className="mt-3 flex items-baseline gap-3">
+                    <span className="display text-6xl">₦2,000</span>
+                    <span className="text-muted">/ $15 international</span>
+                  </div>
+                  <p className="mt-4 text-sm text-muted">
+                    Paystack for Nigeria · Cards worldwide via Stripe
+                  </p>
+                  <Link href="/app/new" className="mt-6 block">
+                    <Button className="group w-full !py-3.5">
+                      Run Ada now
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Link>
+                  <p className="mt-3 text-center text-xs text-muted">
+                    Results typically land in under 3 minutes.
+                  </p>
+                </Card>
+              </div>
             </Reveal>
           </div>
         </section>
@@ -303,15 +363,16 @@ export default function Landing() {
         <section id="faqs" className="border-t border-line bg-surface py-24">
           <div className="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[1fr_2fr]">
             <Reveal>
+              <Eyebrow>Questions</Eyebrow>
               <h2 className="display fluid-h2">FAQs.</h2>
             </Reveal>
             <div className="divide-y divide-line">
               {FAQS.map((faq, i) => (
                 <Reveal key={faq.q} delay={i * 0.03}>
                   <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
                       {faq.q}
-                      <span className="text-xl text-muted transition-transform group-open:rotate-45">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-lg text-muted transition-transform duration-200 group-open:rotate-45">
                         +
                       </span>
                     </summary>
@@ -326,25 +387,57 @@ export default function Landing() {
         </section>
 
         {/* CTA band */}
-        <section className="bg-ink py-24 text-center text-bg">
-          <Reveal>
+        <section className="relative overflow-hidden bg-ink py-28 text-center text-bg">
+          <div
+            className="absolute left-1/2 top-0 -z-0 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
+            aria-hidden
+          />
+          <Reveal className="relative">
             <h2 className="display fluid-h2 mx-auto max-w-2xl px-5">
-              The next role is already out there. Go in prepared.
+              The next role is already out there. Go in{" "}
+              <em className="text-accent">prepared</em>.
             </h2>
             <Link href="/app/new" className="mt-8 inline-block">
-              <Button className="!bg-bg !px-8 !py-4 text-base !text-ink hover:!opacity-90">
-                Start your run <ArrowRight className="size-4" />
+              <Button className="group !bg-bg !px-8 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
+                Start your run
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
             </Link>
+            <p className="mt-6 text-xs text-bg/50">
+              ₦2,000 / $15 per run · No subscription · Results in minutes
+            </p>
           </Reveal>
         </section>
       </main>
 
       <footer className="border-t border-line">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-8 text-xs text-muted">
-          <Logo className="text-base" />
-          <p>Ada is an autonomous agent — no human reads your CV.</p>
-          <p>© {new Date().getFullYear()} Ada</p>
+        <div className="mx-auto max-w-6xl px-5 py-10">
+          <div className="flex flex-wrap items-start justify-between gap-8">
+            <div>
+              <Logo className="text-base" />
+              <p className="mt-2 max-w-xs text-xs leading-relaxed text-muted">
+                An autonomous career agent — no human reads your CV. Rewrite, match,
+                rehearse. One run at a time.
+              </p>
+            </div>
+            <nav className="flex gap-10 text-xs text-muted">
+              <div className="space-y-2">
+                <p className="font-medium text-ink">Product</p>
+                <a href="#how" className="block transition-colors hover:text-ink">How it works</a>
+                <a href="#pricing" className="block transition-colors hover:text-ink">Pricing</a>
+                <a href="#faqs" className="block transition-colors hover:text-ink">FAQs</a>
+              </div>
+              <div className="space-y-2">
+                <p className="font-medium text-ink">App</p>
+                <Link href="/app/new" className="block transition-colors hover:text-ink">Start a run</Link>
+                <Link href="/app/coach" className="block transition-colors hover:text-ink">Ask Ada</Link>
+                <Link href="/login" className="block transition-colors hover:text-ink">Sign in</Link>
+              </div>
+            </nav>
+          </div>
+          <p className="mt-8 border-t border-line pt-6 text-xs text-muted">
+            © {new Date().getFullYear()} Ada · Built for the next role, not the last one.
+          </p>
         </div>
       </footer>
     </>
