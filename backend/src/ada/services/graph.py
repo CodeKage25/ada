@@ -4,8 +4,10 @@
 
 Services and the DB session are bound into node closures at build time so the shared
 state holds only serialisable data. Each node emits a structured run-step log for
-tracing in Cloud Logging.
+tracing in Cloud Logging, and reports itself via on_stage (persisted to the run row)
+so the UI can show real progress instead of guessing.
 """
+from collections.abc import Awaitable, Callable
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -29,7 +31,12 @@ class RunState(TypedDict, total=False):
     questions: list[str]
 
 
-def build_graph(session: AsyncSession, *, run_id: str):
+def build_graph(
+    session: AsyncSession,
+    *,
+    run_id: str,
+    on_stage: Callable[[str], Awaitable[None]] | None = None,
+):
     """Compile a graph for one run, with services and session bound into the nodes."""
     s = get_settings()
     cv = CVService()
@@ -37,19 +44,26 @@ def build_graph(session: AsyncSession, *, run_id: str):
     interview = InterviewService()
     jobs = JobRepository(session)
 
+    async def _stage(name: str) -> None:
+        if on_stage is not None:
+            await on_stage(name)
+
     async def intake(state: RunState) -> RunState:
         # Inputs arrive already on the run (typed form or voice transcript). Placeholder
         # for input normalisation/validation.
+        await _stage("intake")
         emit_run_log(run_id=run_id, step="intake", status="ok")
         return {}
 
     async def cv_rewrite(state: RunState) -> RunState:
+        await _stage("cv_rewrite")
         emit_run_log(run_id=run_id, step="cv_rewrite", status="start")
         md = await cv.rewrite(cv_text=state["cv_text"], target_role=state["target_role"])
         emit_run_log(run_id=run_id, step="cv_rewrite", status="ok")
         return {"rewritten_cv": md}
 
     async def job_match(state: RunState) -> RunState:
+        await _stage("job_match")
         emit_run_log(run_id=run_id, step="job_match", status="start")
         matches = await search.match(
             jobs=jobs, target_role=state["target_role"], cv_text=state["cv_text"],
@@ -59,6 +73,7 @@ def build_graph(session: AsyncSession, *, run_id: str):
         return {"matches": matches}
 
     async def interview_prep(state: RunState) -> RunState:
+        await _stage("interview_prep")
         emit_run_log(run_id=run_id, step="interview_prep", status="start")
         questions = await interview.questions(
             target_role=state["target_role"], cv_text=state["cv_text"],

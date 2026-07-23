@@ -23,7 +23,12 @@ async def execute_run(run_id: str) -> None:
             return
         emit_run_log(run_id=run_id, step="run", status="start")
         try:
-            graph = build_graph(session, run_id=run_id)
+            # Each node reports itself; the row is the single source of truth the
+            # status endpoint (and so the UI timeline) reads from.
+            async def on_stage(stage: str) -> None:
+                await runs.set_stage(run_id, stage)
+
+            graph = build_graph(session, run_id=run_id, on_stage=on_stage)
             final = await graph.ainvoke(
                 {
                     "run_id": run_id,
