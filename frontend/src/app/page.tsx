@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -68,10 +68,12 @@ const FAQS = [
   },
 ];
 
-const HERO_STATS = [
-  ["<3 min", "from payment to results"],
-  ["1", "payment, no subscription"],
-  ["0", "humans in the loop"],
+const RECEIPT_ITEMS = [
+  ["CV rewritten for your role", "included"],
+  ["Best-fit roles, ranked with reasons", "included"],
+  ["Mock interview, scored 0–10", "included"],
+  ["Coaching chat, grounded in your runs", "unlimited"],
+  ["Failed runs", "never charged"],
 ] as const;
 
 function Nav() {
@@ -150,17 +152,15 @@ export default function Landing() {
               </div>
             </Reveal>
             <Reveal delay={0.7}>
-              <dl className="mx-auto mt-12 flex max-w-lg items-start justify-center gap-10 sm:gap-14">
-                {HERO_STATS.map(([value, label]) => (
-                  <div key={label} className="text-center">
-                    <dt className="sr-only">{label}</dt>
-                    <dd className="display text-3xl sm:text-4xl">{value}</dd>
-                    <dd className="mt-1.5 max-w-[8rem] text-xs leading-snug text-muted">
-                      {label}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              {/* One editorial line instead of a stat grid — the numbers live
+                  inside the sentence, where they mean something. */}
+              <p className="mx-auto mt-12 max-w-xl border-t border-line pt-6 text-balance text-sm leading-loose text-muted">
+                Under <em className="display text-xl text-ink">three minutes</em> from
+                payment to results. <em className="display text-xl text-ink">One</em>{" "}
+                payment, no subscription.{" "}
+                <em className="display text-xl text-ink">Zero</em> humans reading your
+                CV.
+              </p>
             </Reveal>
             <Reveal delay={0.35} className="mt-16">
               <HeroShowcase />
@@ -232,50 +232,59 @@ export default function Landing() {
               <h2 className="display fluid-h2 mb-4">Pay per run. Own the result.</h2>
               <p className="max-w-md text-muted">
                 No subscription, no retainer, no career-coach hourly rate. One price, one
-                complete run, yours forever in your account.
+                complete run — itemised on the right, yours forever in your account.
               </p>
-              <ul className="mt-8 space-y-3.5 text-sm">
-                {[
-                  "CV rewrite + ranked matches + scored interview — all included",
-                  "Ask Ada: unlimited coaching chat, grounded in your profile",
-                  "Failed runs are never charged",
-                ].map((line) => (
-                  <li key={line} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft">
-                      <Check className="size-3 text-accent" />
-                    </span>
-                    {line}
-                  </li>
-                ))}
-              </ul>
+              <p className="mt-6 max-w-md text-sm leading-relaxed text-muted">
+                A senior career coach charges more for one hour than Ada charges for the
+                whole run — and Ada shows up in minutes, already knowing your background.
+              </p>
             </Reveal>
             <Reveal delay={0.1}>
-              <div className="rounded-[calc(var(--radius)+3px)] bg-gradient-to-b from-accent/40 via-line to-line p-px shadow-lift">
-                <Card className="!border-0 p-8">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-muted">One run</p>
-                    <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-medium text-accent">
-                      Everything included
-                    </span>
+              {/* The run receipt — pay-per-run, itemised like the real thing */}
+              <Card className="overflow-hidden !p-0 shadow-lift">
+                <div className="flex items-center justify-between border-b border-dashed border-line px-7 py-4">
+                  <span className="display text-lg">
+                    Ada<span className="text-accent">.</span>
+                  </span>
+                  <p className="eyebrow !text-[10px]">Run receipt</p>
+                </div>
+                <ul className="px-7 py-5">
+                  {RECEIPT_ITEMS.map(([item, value]) => (
+                    <li key={item} className="flex items-baseline gap-2 py-1.5 text-sm">
+                      <span className="text-ink">{item}</span>
+                      <span
+                        className="mx-1 flex-1 border-b border-dotted border-line"
+                        aria-hidden
+                      />
+                      <span
+                        className={
+                          value === "included" ? "text-muted" : "font-medium text-accent"
+                        }
+                      >
+                        {value}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="border-t border-dashed border-line px-7 py-6">
+                  <div className="flex items-baseline justify-between">
+                    <p className="text-sm text-muted">Total, one run</p>
+                    <p className="display text-5xl">
+                      ₦2,000
+                      <span className="ml-2 text-base text-muted">/ $15</span>
+                    </p>
                   </div>
-                  <div className="mt-3 flex items-baseline gap-3">
-                    <span className="display text-6xl">₦2,000</span>
-                    <span className="text-muted">/ $15 international</span>
-                  </div>
-                  <p className="mt-4 text-sm text-muted">
-                    Paystack for Nigeria · Cards worldwide via Stripe
-                  </p>
-                  <Link href="/app/new" className="mt-6 block">
+                  <Link href="/app/new" className="mt-5 block">
                     <Button className="group w-full !py-3.5">
                       Run Ada now
                       <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                     </Button>
                   </Link>
                   <p className="mt-3 text-center text-xs text-muted">
-                    Results typically land in under 3 minutes.
+                    Paystack for Nigeria · Stripe worldwide · Results in under 3 minutes
                   </p>
-                </Card>
-              </div>
+                </div>
+              </Card>
             </Reveal>
           </div>
         </section>

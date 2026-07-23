@@ -50,7 +50,7 @@ export function Card({
     <div
       className={`rounded-card border border-line bg-surface shadow-card ${
         hover
-          ? "transition-all duration-200 hover:-translate-y-0.5 hover:border-ink/25 hover:shadow-lift"
+          ? "transition-all duration-200 hover:-translate-y-0.5 hover:border-ink/25 hover:shadow-lift active:translate-y-0 active:scale-[0.995]"
           : ""
       } ${className}`}
     >
