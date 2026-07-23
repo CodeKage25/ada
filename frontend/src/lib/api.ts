@@ -35,6 +35,8 @@ export interface Scorecard {
 
 export interface RunResult {
   status: RunStatus;
+  /** Graph node currently executing while RUNNING; null otherwise. */
+  stage?: "intake" | "cv_rewrite" | "job_match" | "interview_prep" | null;
   target_role: string;
   rewritten_cv: string | null;
   matches: Match[] | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Download, MessageSquareText } from "lucide-react";
+import { Check, Copy, Download, FileDown, MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -130,7 +130,13 @@ function RunDetail() {
               onClick={downloadCv}
               className="!px-3 !py-1.5 text-xs"
             >
-              <Download className="size-3.5" /> Download
+              <Download className="size-3.5" /> Markdown
+            </Button>
+            <Button
+              onClick={() => window.open(`/print/run/${id}`, "_blank", "noopener")}
+              className="!px-3 !py-1.5 text-xs"
+            >
+              <FileDown className="size-3.5" /> Save PDF
             </Button>
           </div>
         </div>

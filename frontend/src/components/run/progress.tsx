@@ -7,15 +7,18 @@ import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui";
 import { api, type RunStatus } from "@/lib/api";
 
-/** Stages mirror the backend LangGraph: intake -> cv -> match -> interview. The
- *  API doesn't stream node progress, so within RUNNING the stages advance on a
- *  pace matched to typical node latency; COMPLETE snaps everything done. */
+/** Stages mirror the backend LangGraph: intake -> cv -> match -> interview.
+ *  The status endpoint reports the node actually executing (run.stage), so the
+ *  timeline shows real progress. Time-based pacing remains only as a fallback
+ *  for runs that predate stage reporting. */
 const STAGES = [
   { key: "intake", label: "Reading your background" },
-  { key: "cv", label: "Rewriting your CV for the role" },
-  { key: "match", label: "Searching for your best-fit roles" },
-  { key: "interview", label: "Preparing your interview questions" },
+  { key: "cv_rewrite", label: "Rewriting your CV for the role" },
+  { key: "job_match", label: "Searching for your best-fit roles" },
+  { key: "interview_prep", label: "Preparing your interview questions" },
 ];
+
+const STAGE_INDEX = new Map(STAGES.map((s, i) => [s.key, i]));
 
 const POLL_MS = 2500;
 const STAGE_PACE_MS = 9000;
@@ -34,9 +37,14 @@ export function RunProgress({ runId }: { runId: string }) {
         if (cancelled) return;
         setStatus(run.status);
         if (run.status === "running" || run.status === "paid") {
-          runningSince.current ??= Date.now();
-          const elapsed = Date.now() - runningSince.current;
-          setStage(Math.min(STAGES.length - 1, Math.floor(elapsed / STAGE_PACE_MS)));
+          const live = run.stage != null ? STAGE_INDEX.get(run.stage) : undefined;
+          if (live !== undefined) {
+            setStage(live);
+          } else {
+            runningSince.current ??= Date.now();
+            const elapsed = Date.now() - runningSince.current;
+            setStage(Math.min(STAGES.length - 1, Math.floor(elapsed / STAGE_PACE_MS)));
+          }
         }
         if (run.status === "complete") {
           setStage(STAGES.length);
