@@ -65,6 +65,10 @@ class Run(Base):
     status: Mapped[RunStatus] = mapped_column(
         String(20), default=RunStatus.PENDING_PAYMENT, index=True
     )
+    # Graph node currently executing while RUNNING ("intake", "cv_rewrite",
+    # "job_match", "interview_prep"); cleared on completion, kept on failure as a
+    # diagnostic of where the run died.
+    stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

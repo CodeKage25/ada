@@ -11,7 +11,10 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Ada — the career agent that gets you hired",
+  title: {
+    default: "Ada — the career agent that gets you hired",
+    template: "%s · Ada",
+  },
   description:
     "Ada rewrites your CV for the role you want — in any industry — finds your best-fit jobs, and coaches you through the interview. One agent, end to end.",
 };

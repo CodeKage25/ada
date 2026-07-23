@@ -1,12 +1,25 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useScroll, useSpring } from "motion/react";
 import { useEffect, useState } from "react";
 
 import { Card, ScoreBar } from "@/components/ui";
 
 const EASE = [0.21, 0.6, 0.35, 1] as const;
+
+/** Hairline accent bar across the very top that fills as the page scrolls. */
+export function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.4 });
+  return (
+    <motion.div
+      className="fixed inset-x-0 top-0 z-50 h-[2.5px] origin-left bg-accent"
+      style={{ scaleX }}
+      aria-hidden
+    />
+  );
+}
 
 /** Hero headline: words rise out of a blur one by one, then a hand-drawn
  *  underline sweeps beneath "hired". */

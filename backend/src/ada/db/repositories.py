@@ -116,6 +116,11 @@ class RunRepository:
         run.status = status
         await self._s.commit()
 
+    async def set_stage(self, run_id: str, stage: str) -> None:
+        """Record the graph node currently executing — live progress for the UI."""
+        await self._s.execute(update(Run).where(Run.id == run_id).values(stage=stage))
+        await self._s.commit()
+
     async def set_deliverables(
         self, run: Run, *, rewritten_cv: str, matches: list[Any], questions: list[Any]
     ) -> None:
@@ -124,6 +129,7 @@ class RunRepository:
         run.matches_json = matches
         run.questions_json = questions
         run.status = RunStatus.COMPLETE
+        run.stage = None
         await self._s.commit()
 
     async def set_interview(self, run: Run, interview: dict[str, Any]) -> None:
