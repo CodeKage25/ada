@@ -16,8 +16,7 @@ next-env.d.ts
 *.tsbuildinfo
 
 # assistant working files (not part of the product)
-Claude.md
-CLAUDE.md
+**/CLAUDE.md
+**/Claude.md
 tasks/
-.claude/*
-!.claude/skills/
+**/.claude/
