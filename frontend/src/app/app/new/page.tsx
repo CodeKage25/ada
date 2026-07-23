@@ -1,16 +1,31 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/app/shell";
 import { RunProgress } from "@/components/run/progress";
-import { Button, Card, Input, Label, Textarea } from "@/components/ui";
+import { Button, Card, Input, Label, PageHeader, Textarea } from "@/components/ui";
 import { api } from "@/lib/api";
 import { loadPaystack } from "@/lib/paystack";
 
 const DRAFT_KEY = "ada.intake-draft";
+
+const PROVIDERS = [
+  {
+    value: "paystack",
+    name: "Paystack",
+    price: "₦2,000",
+    detail: "Nigeria · cards, transfer, USSD",
+  },
+  {
+    value: "stripe",
+    name: "Card via Stripe",
+    price: "$15",
+    detail: "Everywhere else · all major cards",
+  },
+] as const;
 
 function NewRun() {
   const { email } = useAuth();
@@ -81,16 +96,17 @@ function NewRun() {
 
   return (
     <>
-      <h1 className="display mb-2 text-3xl">Start a run.</h1>
-      <p className="mb-8 text-sm text-muted">
-        One payment. Ada rewrites your CV for the role, finds your best-fit jobs, and
-        preps your interview — autonomously, in minutes.
-      </p>
+      <PageHeader
+        title="Start a run."
+        subtitle="One payment. Ada rewrites your CV for the role, finds your best-fit jobs, and preps your interview — autonomously, in minutes."
+      />
       {params.get("canceled") && (
-        <p className="mb-4 text-sm text-muted">Checkout was cancelled — no charge.</p>
+        <p className="mb-4 rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn">
+          Checkout was cancelled — no charge.
+        </p>
       )}
-      <Card className="p-6">
-        <form onSubmit={submit} className="space-y-5">
+      <Card className="p-6 sm:p-8">
+        <form onSubmit={submit} className="space-y-6">
           <div>
             <Label htmlFor="role">Target role</Label>
             <Input
@@ -116,31 +132,44 @@ function NewRun() {
           </div>
           <div>
             <Label>Pay with</Label>
-            <div className="flex gap-2">
-              {(
-                [
-                  ["paystack", "Paystack · ₦ (Nigeria)"],
-                  ["stripe", "Card · $ (Global)"],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setProvider(value)}
-                  className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-                    provider === value
-                      ? "border-accent bg-accent-soft font-medium text-accent"
-                      : "border-line text-muted hover:border-ink/30"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {PROVIDERS.map((p) => {
+                const selected = provider === p.value;
+                return (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setProvider(p.value)}
+                    aria-pressed={selected}
+                    className={`relative rounded-xl border p-4 text-left transition-all ${
+                      selected
+                        ? "border-accent bg-accent-soft shadow-card"
+                        : "border-line hover:border-ink/30"
+                    }`}
+                  >
+                    <span
+                      className={`absolute right-3 top-3 flex size-5 items-center justify-center rounded-full border transition-colors ${
+                        selected
+                          ? "border-accent bg-accent text-accent-ink"
+                          : "border-line text-transparent"
+                      }`}
+                    >
+                      <Check className="size-3" />
+                    </span>
+                    <p className={`text-sm font-medium ${selected ? "text-accent" : ""}`}>
+                      {p.name}
+                    </p>
+                    <p className="display mt-1 text-2xl">{p.price}</p>
+                    <p className="mt-1 text-xs text-muted">{p.detail}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
           {error && <p className="text-sm text-danger">{error}</p>}
-          <Button type="submit" loading={busy} className="w-full">
-            Run Ada <ArrowRight className="size-4" />
+          <Button type="submit" loading={busy} className="group w-full !py-3.5">
+            Run Ada
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
           </Button>
           <p className="text-center text-xs text-muted">
             Payment unlocks the run. Failed runs are never charged.

@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/app/shell";
-import { Button, Card, Input, Label, Spinner, Textarea } from "@/components/ui";
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  PageHeader,
+  Skeleton,
+  Textarea,
+} from "@/components/ui";
 import { api } from "@/lib/api";
 
 export default function ProfilePage() {
@@ -53,15 +61,24 @@ export default function ProfilePage() {
     router.replace("/login");
   };
 
-  if (!loaded) return <Spinner label="Loading profile..." />;
+  if (!loaded) {
+    return (
+      <div>
+        <Skeleton className="h-9 w-40" />
+        <Card className="mt-8 space-y-4 p-6">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <>
-      <h1 className="display mb-2 text-3xl">Profile.</h1>
-      <p className="mb-8 text-sm text-muted">
-        The more Ada knows about your background, the sharper her advice, rewrites, and
-        matches get.
-      </p>
+      <PageHeader
+        title="Profile."
+        subtitle="The more Ada knows about your background, the sharper her advice, rewrites, and matches get."
+      />
 
       <Card className="mb-6 p-6">
         <form onSubmit={save} className="space-y-5">
@@ -107,9 +124,14 @@ export default function ProfilePage() {
       </Card>
 
       <Card className="flex items-center justify-between px-6 py-4">
-        <div>
-          <p className="text-sm font-medium">{email}</p>
-          <p className="text-xs text-muted">Signed in with a magic link</p>
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent">
+            {email[0]}
+          </span>
+          <div>
+            <p className="text-sm font-medium">{email}</p>
+            <p className="text-xs text-muted">Signed in with a magic link</p>
+          </div>
         </div>
         <Button variant="secondary" onClick={logout}>
           <LogOut className="size-4" /> Sign out
