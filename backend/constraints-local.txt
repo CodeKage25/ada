@@ -1,0 +1,3 @@
+# Local-dev constraints for machines where newer cryptography has no binary wheel
+# (older macOS + Python 3.13). CI/prod install without this file.
+cryptography==44.0.2

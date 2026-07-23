@@ -1,0 +1,24 @@
+"""Request-scoped auth dependencies."""
+from fastapi import Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ada.auth.repository import AuthRepository
+from ada.auth.tokens import hash_token
+from ada.config import get_settings
+from ada.db.models import User
+from ada.db.session import get_session
+
+
+async def optional_user(
+    request: Request, session: AsyncSession = Depends(get_session)
+) -> User | None:
+    raw = request.cookies.get(get_settings().session_cookie)
+    if not raw:
+        return None
+    return await AuthRepository(session).user_for_session(hash_token(raw))
+
+
+async def current_user(user: User | None = Depends(optional_user)) -> User:
+    if user is None:
+        raise HTTPException(status_code=401, detail="not authenticated")
+    return user

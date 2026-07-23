@@ -1,0 +1,118 @@
+"""ORM models.
+
+Run: one per paid session; holds inputs and the generated deliverables (rewritten CV,
+job matches, interview questions, and scored answers). ProcessedEvent: idempotency
+ledger for webhook events. Job: seeded reference data with a pgvector embedding.
+User/AuthToken/Session: magic-link authentication — tokens are stored hashed and are
+single-use; sessions are opaque tokens hashed at rest.
+"""
+from datetime import datetime
+from enum import StrEnum
+from typing import Any
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+EMBED_DIM = 768  # text-embedding-004
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class RunStatus(StrEnum):
+    PENDING_PAYMENT = "pending_payment"  # created, awaiting a verified payment
+    PAID = "paid"                        # payment confirmed, awaiting/undergoing dispatch
+    RUNNING = "running"                  # agent graph in progress
+    COMPLETE = "complete"                # deliverables stored
+    FAILED = "failed"                    # graph raised; not retried automatically
+
+
+class ProcessedEvent(Base):
+    """A payment reference lands here exactly once — the idempotency guarantee."""
+    __tablename__ = "processed_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    provider: Mapped[str] = mapped_column(String(32))
+    reference: Mapped[str] = mapped_column(String(128))
+    __table_args__ = (UniqueConstraint("provider", "reference", name="uq_event"),)
+
+
+class Run(Base):
+    __tablename__ = "runs"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    reference: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    provider: Mapped[str] = mapped_column(String(32), default="paystack")
+    amount: Mapped[int] = mapped_column(Integer, default=0)
+    currency: Mapped[str] = mapped_column(String(8), default="NGN")
+    email: Mapped[str] = mapped_column(String(320))
+    # Nullable: runs can be created (and paid for) without an account; linked when a
+    # session exists at creation time.
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    target_role: Mapped[str] = mapped_column(String(256))
+    cv_text: Mapped[str] = mapped_column(Text)
+    transcript: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # autonomous deliverables (filled by the graph run)
+    rewritten_cv: Mapped[str | None] = mapped_column(Text, nullable=True)
+    matches_json: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
+    questions_json: Mapped[list[Any] | None] = mapped_column(JSONB, nullable=True)
+    # scored interview (filled by the follow-up /interview endpoint)
+    interview_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
+    # Stored as VARCHAR (not a native pg enum) so migrations stay simple and drift-free.
+    status: Mapped[RunStatus] = mapped_column(
+        String(20), default=RunStatus.PENDING_PAYMENT, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Job(Base):
+    """Seeded reference data. Matched to a run via pgvector cosine KNN."""
+    __tablename__ = "jobs"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(256))
+    company: Mapped[str] = mapped_column(String(256))
+    location: Mapped[str] = mapped_column(String(256))
+    description: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBED_DIM))
+
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuthToken(Base):
+    """Single-use magic-link token. Only the sha256 hash is stored."""
+    __tablename__ = "auth_tokens"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Session(Base):
+    """Opaque browser session. Only the sha256 hash of the cookie token is stored."""
+    __tablename__ = "sessions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Profile(Base):
+    """Career profile imported by the user (LinkedIn export/paste). Grounds chat and runs."""
+    __tablename__ = "profiles"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    linkedin_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    profile_text: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

@@ -1,0 +1,87 @@
+"""Auth data access: users, magic-link tokens, sessions.
+
+consume_token is atomic (UPDATE ... WHERE used_at IS NULL) so a magic link clicked
+twice concurrently authenticates at most once.
+"""
+import uuid
+from datetime import UTC, datetime, timedelta
+
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ada.db.models import AuthToken, Session, User
+
+MAGIC_TOKEN_TTL = timedelta(minutes=15)
+SESSION_TTL = timedelta(days=30)
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+class AuthRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def upsert_user(self, email: str) -> User:
+        email = email.lower().strip()
+        stmt = (
+            insert(User)
+            .values(id=uuid.uuid4().hex, email=email)
+            .on_conflict_do_nothing(index_elements=["email"])
+        )
+        await self._s.execute(stmt)
+        user = (
+            await self._s.execute(select(User).where(User.email == email))
+        ).scalar_one()
+        await self._s.commit()
+        return user
+
+    async def get_user(self, user_id: str) -> User | None:
+        return await self._s.get(User, user_id)
+
+    async def create_magic_token(self, user_id: str, token_hash: str) -> None:
+        # One outstanding link per user: minting invalidates earlier unused tokens.
+        await self._s.execute(
+            delete(AuthToken).where(AuthToken.user_id == user_id, AuthToken.used_at.is_(None))
+        )
+        self._s.add(
+            AuthToken(user_id=user_id, token_hash=token_hash, expires_at=_now() + MAGIC_TOKEN_TTL)
+        )
+        await self._s.commit()
+
+    async def consume_magic_token(self, token_hash: str) -> str | None:
+        """Mark the token used and return its user_id; None if invalid/expired/used."""
+        stmt = (
+            update(AuthToken)
+            .where(
+                AuthToken.token_hash == token_hash,
+                AuthToken.used_at.is_(None),
+                AuthToken.expires_at > _now(),
+            )
+            .values(used_at=_now())
+            .returning(AuthToken.user_id)
+        )
+        user_id = (await self._s.execute(stmt)).scalar_one_or_none()
+        await self._s.commit()
+        return user_id
+
+    async def create_session(self, user_id: str, token_hash: str) -> None:
+        self._s.add(
+            Session(user_id=user_id, token_hash=token_hash, expires_at=_now() + SESSION_TTL)
+        )
+        await self._s.commit()
+
+    async def user_for_session(self, token_hash: str) -> User | None:
+        stmt = (
+            select(User)
+            .join(Session, Session.user_id == User.id)
+            .where(Session.token_hash == token_hash, Session.expires_at > _now())
+        )
+        user = (await self._s.execute(stmt)).scalar_one_or_none()
+        return user
+
+    async def destroy_session(self, token_hash: str) -> None:
+        await self._s.execute(delete(Session).where(Session.token_hash == token_hash))
+        await self._s.commit()
