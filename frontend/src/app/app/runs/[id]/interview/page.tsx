@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Button, Card, ScoreBar, Skeleton, Textarea } from "@/components/ui";
+import { Button, Card, ScoreBar, ScoreRing, Skeleton, Textarea } from "@/components/ui";
 import { api, type Scorecard } from "@/lib/api";
 
 export default function InterviewPage() {
@@ -47,12 +47,17 @@ export default function InterviewPage() {
         >
           <ArrowLeft className="size-4" /> Back to run
         </Link>
-        <div className="mb-8 flex items-end justify-between">
-          <h1 className="display text-3xl">Your scorecard.</h1>
-          <p className="display text-6xl text-accent">
-            {scorecard.overall_score}
-            <span className="text-xl text-muted">/10</span>
-          </p>
+        <div className="mb-8 flex items-center justify-between gap-6">
+          <div>
+            <h1 className="display text-3xl">Your scorecard.</h1>
+            <p className="mt-2 max-w-sm text-sm text-muted">
+              Scored on substance, structure, and relevance to the role.
+            </p>
+          </div>
+          <ScoreRing value={scorecard.overall_score} max={10} size={112} stroke={8}>
+            <span className="display text-4xl">{scorecard.overall_score}</span>
+            <span className="mt-0.5 text-[11px] text-muted">out of 10</span>
+          </ScoreRing>
         </div>
         <Card className="mb-8 border-l-2 !border-l-accent p-5">
           <p className="text-sm leading-relaxed">{scorecard.summary}</p>

@@ -1,7 +1,13 @@
 import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
-import { CareersBand, HeroHeadline, HeroShowcase, Reveal } from "@/components/marketing/demo";
+import {
+  CareersBand,
+  HeroHeadline,
+  HeroShowcase,
+  Reveal,
+  ScrollProgress,
+} from "@/components/marketing/demo";
 import { Button, Card, Eyebrow, Logo, ScoreBar, ThemeToggle } from "@/components/ui";
 
 const STEPS = [
@@ -99,6 +105,7 @@ function Nav() {
 export default function Landing() {
   return (
     <>
+      <ScrollProgress />
       <Nav />
       <main>
         {/* Hero — centered, editorial */}

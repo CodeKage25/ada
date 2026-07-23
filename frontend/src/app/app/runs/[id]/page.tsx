@@ -89,12 +89,29 @@ function RunDetail() {
     URL.revokeObjectURL(url);
   };
 
+  const stats: [string, string][] = [];
+  if (run.matches?.length) stats.push([String(run.matches.length), "matches found"]);
+  if (run.matches?.[0]) stats.push([`${run.matches[0].match}%`, "top match"]);
+  if (run.questions?.length) stats.push([String(run.questions.length), "questions"]);
+  if (run.interview) stats.push([`${run.interview.overall_score}/10`, "interview score"]);
+
   return (
     <>
       <PageHeader
         title={`${run.target_role}.`}
         subtitle="Your complete run — CV, matches, interview."
       />
+
+      {stats.length > 0 && (
+        <Card className="mb-10 flex divide-x divide-line overflow-x-auto quiet-scroll">
+          {stats.map(([value, label]) => (
+            <div key={label} className="min-w-28 flex-1 px-5 py-4">
+              <p className="display text-2xl">{value}</p>
+              <p className="mt-1 whitespace-nowrap text-xs text-muted">{label}</p>
+            </div>
+          ))}
+        </Card>
+      )}
 
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">

@@ -2,6 +2,7 @@
 
 import {
   FileText,
+  LayoutDashboard,
   LayoutList,
   MessageCircle,
   Mic,
@@ -23,10 +24,18 @@ export const useAuth = () => {
   return ctx;
 };
 
-const NAV_GROUPS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+};
+
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   {
-    label: "Runs",
+    label: "Workspace",
     items: [
+      { href: "/app", label: "Home", icon: LayoutDashboard, exact: true },
       { href: "/app/new", label: "New run", icon: Plus },
       { href: "/app/runs", label: "My runs", icon: LayoutList },
       { href: "/app/documents", label: "Documents", icon: FileText },
@@ -39,16 +48,18 @@ const NAV_GROUPS = [
       { href: "/app/voice", label: "Voice intake", icon: Mic },
     ],
   },
-] as const;
+];
 
-const MOBILE_NAV = [
+const MOBILE_NAV: NavItem[] = [
+  { href: "/app", label: "Home", icon: LayoutDashboard, exact: true },
   { href: "/app/new", label: "New", icon: Plus },
   { href: "/app/runs", label: "Runs", icon: LayoutList },
   { href: "/app/coach", label: "Ask Ada", icon: MessageCircle },
-  { href: "/app/documents", label: "Docs", icon: FileText },
-  { href: "/app/voice", label: "Voice", icon: Mic },
   { href: "/app/profile", label: "You", icon: UserRound },
-] as const;
+];
+
+const isActive = (pathname: string, item: NavItem) =>
+  item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -86,8 +97,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div key={group.label}>
                 <p className="eyebrow mb-2 px-3 !text-[10px]">{group.label}</p>
                 <div className="space-y-0.5">
-                  {group.items.map(({ href, label, icon: Icon }) => {
-                    const active = pathname.startsWith(href);
+                  {group.items.map((item) => {
+                    const { href, label, icon: Icon } = item;
+                    const active = isActive(pathname, item);
                     return (
                       <Link
                         key={href}
@@ -147,8 +159,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="mx-auto flex max-w-md items-stretch justify-around">
-            {MOBILE_NAV.map(({ href, icon: Icon, label }) => {
-              const active = pathname.startsWith(href);
+            {MOBILE_NAV.map((item) => {
+              const { href, icon: Icon, label } = item;
+              const active = isActive(pathname, item);
               return (
                 <Link
                   key={href}
