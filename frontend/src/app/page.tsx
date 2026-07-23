@@ -5,10 +5,14 @@ import {
   CareersBand,
   HeroHeadline,
   HeroShowcase,
+  IntroVeil,
+  Magnetic,
   Reveal,
   ScrollProgress,
+  ScrubText,
 } from "@/components/marketing/demo";
-import { Button, Card, Eyebrow, Logo, ScoreBar, ThemeToggle } from "@/components/ui";
+import { DeliverablesShowcase } from "@/components/marketing/showcase";
+import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
 
 const STEPS = [
   {
@@ -105,6 +109,7 @@ function Nav() {
 export default function Landing() {
   return (
     <>
+      <IntroVeil />
       <ScrollProgress />
       <Nav />
       <main>
@@ -128,12 +133,14 @@ export default function Landing() {
             </Reveal>
             <Reveal delay={0.6}>
               <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-                <Link href="/app/new">
-                  <Button className="group !px-8 !py-4 text-base">
-                    Start your run
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                  </Button>
-                </Link>
+                <Magnetic>
+                  <Link href="/app/new">
+                    <Button className="group !px-8 !py-4 text-base">
+                      Start your run
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Link>
+                </Magnetic>
                 <Link
                   href="/app/voice"
                   className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
@@ -164,101 +171,24 @@ export default function Landing() {
         {/* Every-career band */}
         <CareersBand />
 
-        {/* Problem band */}
-        <section className="bg-ink py-28 text-bg">
+        {/* Problem band — words brighten as you scroll through the statement */}
+        <section className="bg-ink py-32 text-bg">
           <div className="mx-auto max-w-4xl px-5">
-            <Reveal>
-              <p className="eyebrow mb-6 !text-bg/50">The problem</p>
-              <p className="display fluid-band leading-snug">
-                Job searching is a full-time job you didn&apos;t apply for.{" "}
-                <span className="opacity-50">
-                  Rewriting your CV for every role. Guessing what recruiters search for.
-                  Walking into interviews cold.
-                </span>{" "}
-                Ada does all of it — in <em className="text-accent">one run</em>.
-              </p>
-            </Reveal>
+            <p className="eyebrow mb-6 !text-bg/50">The problem</p>
+            <ScrubText
+              className="display fluid-band leading-snug"
+              segments={[
+                {
+                  text: "Job searching is a full-time job you didn’t apply for. Rewriting your CV for every role. Guessing what recruiters search for. Walking into interviews cold. Ada does all of it — in",
+                },
+                { text: "one run.", className: "text-accent italic" },
+              ]}
+            />
           </div>
         </section>
 
-        {/* Capabilities */}
-        <section className="mx-auto max-w-6xl scroll-mt-24 px-5 py-28">
-          <Reveal>
-            <Eyebrow>What you get</Eyebrow>
-            <h2 className="display fluid-h2 mb-14">One payment. Three deliverables.</h2>
-          </Reveal>
-          <div className="grid gap-6 md:grid-cols-3">
-            <Reveal delay={0.05}>
-              <Card hover className="h-full p-6">
-                <p className="eyebrow mb-4 !text-[10px]">01 · Rewrite</p>
-                <div className="prose-ada mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
-                  <p className="font-semibold">Summary</p>
-                  <p className="text-muted">
-                    Registered nurse with 6 years across A&amp;E and post-op recovery…
-                  </p>
-                  <p className="mt-2 font-semibold">Experience</p>
-                  <p>· Cut triage-to-treatment time 30% by redesigning intake flow</p>
-                  <p>· Mentored a 12-nurse night team across two wards</p>
-                </div>
-                <h3 className="mb-1.5 font-semibold">CV rewrite, for the role</h3>
-                <p className="text-sm leading-relaxed text-muted">
-                  ATS-safe headers, your industry&apos;s vocabulary, duties turned into
-                  achievement bullets. Your facts only — sharpened, never invented.
-                </p>
-              </Card>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <Card hover className="h-full p-6">
-                <p className="eyebrow mb-4 !text-[10px]">02 · Match</p>
-                <div className="mb-5 space-y-3 rounded-xl border border-line bg-bg p-4">
-                  {[
-                    ["Marketing Manager", 91],
-                    ["Brand Manager", 86],
-                    ["Growth Lead", 82],
-                  ].map(([title, score]) => (
-                    <div key={title as string}>
-                      <div className="flex justify-between text-[12px]">
-                        <span className="font-medium">{title}</span>
-                        <span className="text-accent">{score}%</span>
-                      </div>
-                      <div className="mt-1">
-                        <ScoreBar value={score as number} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <h3 className="mb-1.5 font-semibold">Matches that fit</h3>
-                <p className="text-sm leading-relaxed text-muted">
-                  Semantic search over real roles — ranked by fit against your actual
-                  experience, each with a reason, not just a keyword hit.
-                </p>
-              </Card>
-            </Reveal>
-            <Reveal delay={0.15}>
-              <Card hover className="h-full p-6">
-                <p className="eyebrow mb-4 !text-[10px]">03 · Rehearse</p>
-                <div className="mb-5 rounded-xl border border-line bg-bg p-4 text-[12px]">
-                  <p className="text-muted">
-                    “Tell me about a time you turned around an unhappy client.”
-                  </p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <ScoreBar value={8} max={10} />
-                    <span className="display shrink-0 text-base">8/10</span>
-                  </div>
-                  <p className="mt-2 text-muted">
-                    Clear story, strong result. Say how big the account you saved was —
-                    numbers land.
-                  </p>
-                </div>
-                <h3 className="mb-1.5 font-semibold">A scored mock interview</h3>
-                <p className="text-sm leading-relaxed text-muted">
-                  Role-specific questions, then honest 0–10 scoring with feedback you can
-                  use in the real room.
-                </p>
-              </Card>
-            </Reveal>
-          </div>
-        </section>
+        {/* Deliverables — pinned scroll showcase on desktop, stacked on mobile */}
+        <DeliverablesShowcase />
 
         {/* How it works */}
         <section id="how" className="scroll-mt-24 border-y border-line bg-surface py-28">
@@ -391,12 +321,14 @@ export default function Landing() {
               The next role is already out there. Ada gets you ready for it — whatever
               the industry.
             </p>
-            <Link href="/app/new" className="mt-9 inline-block">
-              <Button className="group !bg-bg !px-9 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
-                Start your run
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </Button>
-            </Link>
+            <Magnetic className="mt-9">
+              <Link href="/app/new" className="inline-block">
+                <Button className="group !bg-bg !px-9 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
+                  Start your run
+                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                </Button>
+              </Link>
+            </Magnetic>
             <p className="mt-6 text-xs text-bg/50">
               ₦2,000 / $15 per run · No subscription · Results in minutes
             </p>

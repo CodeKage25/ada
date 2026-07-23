@@ -1,12 +1,153 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { motion, useScroll, useSpring } from "motion/react";
-import { useEffect, useState } from "react";
+import {
+  motion,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Card, ScoreBar } from "@/components/ui";
 
 const EASE = [0.21, 0.6, 0.35, 1] as const;
+
+/** Once-per-session intro: a paper curtain with the wordmark that lifts away.
+ *  Skipped for repeat visits (sessionStorage) and under reduced motion. */
+export function IntroVeil() {
+  const [show, setShow] = useState(true);
+  // Layout effect so repeat visitors never see a flash of the veil.
+  useLayoutEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || sessionStorage.getItem("ada.intro-seen")) {
+      setShow(false);
+      return;
+    }
+    sessionStorage.setItem("ada.intro-seen", "1");
+  }, []);
+  if (!show) return null;
+  return (
+    <motion.div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-bg"
+      initial={{ y: 0 }}
+      animate={{ y: "-100%" }}
+      transition={{ delay: 1.05, duration: 0.65, ease: [0.76, 0, 0.24, 1] }}
+      onAnimationComplete={() => setShow(false)}
+      aria-hidden
+    >
+      <motion.p
+        className="display text-6xl"
+        initial={{ opacity: 0, y: 16, filter: "blur(10px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5, delay: 0.15, ease: EASE }}
+      >
+        Ada<span className="text-accent">.</span>
+      </motion.p>
+    </motion.div>
+  );
+}
+
+/** Wrapper that makes its child lean toward the cursor. No-op on touch and
+ *  under reduced motion. */
+export function Magnetic({
+  children,
+  strength = 0.22,
+  className = "",
+}: {
+  children: React.ReactNode;
+  strength?: number;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const x = useSpring(0, { stiffness: 190, damping: 15, mass: 0.3 });
+  const y = useSpring(0, { stiffness: 190, damping: 15, mass: 0.3 });
+  const move = (e: React.PointerEvent) => {
+    if (reduce || e.pointerType !== "mouse" || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    x.set((e.clientX - r.left - r.width / 2) * strength);
+    y.set((e.clientY - r.top - r.height / 2) * strength);
+  };
+  const reset = () => {
+    x.set(0);
+    y.set(0);
+  };
+  return (
+    <motion.div
+      ref={ref}
+      onPointerMove={move}
+      onPointerLeave={reset}
+      style={{ x, y }}
+      className={`inline-block ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Scroll-scrubbed statement: words brighten one by one as the paragraph moves
+ *  through the viewport. Full opacity immediately under reduced motion. */
+export function ScrubText({
+  segments,
+  className = "",
+}: {
+  segments: { text: string; className?: string }[];
+  className?: string;
+}) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const reduce = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 0.85", "end 0.45"],
+  });
+  const words = segments.flatMap((s) =>
+    s.text.split(" ").map((w) => ({ w, cls: s.className ?? "" })),
+  );
+  return (
+    <p ref={ref} className={className}>
+      {words.map((item, i) => (
+        <ScrubWord
+          key={`${item.w}-${i}`}
+          progress={scrollYProgress}
+          start={i / words.length}
+          end={(i + 1) / words.length}
+          reduce={!!reduce}
+          cls={item.cls}
+        >
+          {item.w}
+        </ScrubWord>
+      ))}
+    </p>
+  );
+}
+
+function ScrubWord({
+  progress,
+  start,
+  end,
+  reduce,
+  cls,
+  children,
+}: {
+  progress: ReturnType<typeof useScroll>["scrollYProgress"];
+  start: number;
+  end: number;
+  reduce: boolean;
+  cls: string;
+  children: React.ReactNode;
+}) {
+  const opacity = useTransform(progress, [start, end], [0.16, 1]);
+  return (
+    <motion.span
+      style={reduce ? undefined : { opacity }}
+      className={`inline-block whitespace-pre ${cls}`}
+    >
+      {children}{" "}
+    </motion.span>
+  );
+}
 
 /** Hairline accent bar across the very top that fills as the page scrolls. */
 export function ScrollProgress() {
@@ -191,44 +332,96 @@ function DemoCard() {
   );
 }
 
+/** Floating proof chip: an outer absolutely-positioned motion wrapper carries
+ *  the scroll parallax (drift), while the inner element keeps the CSS float
+ *  animation and rotation — the two transforms never fight. */
 function ProofChip({
-  className = "",
-  style,
+  position,
+  rotate = "",
+  drift,
+  delay,
   children,
 }: {
-  className?: string;
-  style?: React.CSSProperties;
+  position: string;
+  rotate?: string;
+  drift?: ReturnType<typeof useTransform<number, number>>;
+  delay?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className={`float-y absolute z-10 flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-xs font-medium shadow-lift max-lg:hidden ${className}`}
-      style={style}
+    <motion.div
+      className={`absolute z-10 max-lg:hidden ${position}`}
+      style={drift ? { y: drift } : undefined}
       aria-hidden
     >
-      {children}
-    </div>
+      <div
+        className={`float-y flex items-center gap-1.5 rounded-full border border-line bg-surface px-3.5 py-2 text-xs font-medium shadow-lift ${rotate}`}
+        style={delay ? { animationDelay: delay } : undefined}
+      >
+        {children}
+      </div>
+    </motion.div>
   );
 }
 
 /** Demo card with floating proof chips orbiting it. */
 export function HeroShowcase() {
+  const reduce = useReducedMotion();
+  // Parallax: the card settles down-page slower than the chips as you scroll.
+  const { scrollY } = useScroll();
+  const cardDrift = useTransform(scrollY, [0, 700], [0, 46]);
+  const chipDriftA = useTransform(scrollY, [0, 700], [0, -70]);
+  const chipDriftB = useTransform(scrollY, [0, 700], [0, -110]);
+  const chipDriftC = useTransform(scrollY, [0, 700], [0, -50]);
+  // Pointer tilt on the card itself.
+  const rotateX = useSpring(0, { stiffness: 160, damping: 16, mass: 0.4 });
+  const rotateY = useSpring(0, { stiffness: 160, damping: 16, mass: 0.4 });
+  const tilt = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (reduce || e.pointerType !== "mouse") return;
+    const r = e.currentTarget.getBoundingClientRect();
+    rotateY.set(((e.clientX - r.left) / r.width - 0.5) * 12);
+    rotateX.set(((e.clientY - r.top) / r.height - 0.5) * -12);
+  };
+  const untilt = () => {
+    rotateX.set(0);
+    rotateY.set(0);
+  };
   return (
     <div className="relative mx-auto w-full max-w-md">
       <div
         className="absolute -inset-10 -z-10 rounded-[3rem] bg-accent/10 blur-3xl"
         aria-hidden
       />
-      <ProofChip className="-left-36 top-8 -rotate-3">
+      <ProofChip position="-left-36 top-8" rotate="-rotate-3" drift={reduce ? undefined : chipDriftA}>
         <Check className="size-3.5 text-success" /> CV rewritten — ATS-safe
       </ProofChip>
-      <ProofChip className="-right-28 top-1/3 rotate-2" style={{ animationDelay: "1.2s" }}>
+      <ProofChip
+        position="-right-28 top-1/3"
+        rotate="rotate-2"
+        drift={reduce ? undefined : chipDriftB}
+        delay="1.2s"
+      >
         <span className="display text-base text-accent">93%</span> match found
       </ProofChip>
-      <ProofChip className="-left-28 bottom-10 rotate-1" style={{ animationDelay: "2.1s" }}>
+      <ProofChip
+        position="-left-28 bottom-10"
+        rotate="rotate-1"
+        drift={reduce ? undefined : chipDriftC}
+        delay="2.1s"
+      >
         Interview scored <span className="display text-base text-accent">8/10</span>
       </ProofChip>
-      <DemoCard />
+      <motion.div
+        onPointerMove={tilt}
+        onPointerLeave={untilt}
+        style={
+          reduce
+            ? undefined
+            : { y: cardDrift, rotateX, rotateY, transformPerspective: 1000 }
+        }
+      >
+        <DemoCard />
+      </motion.div>
     </div>
   );
 }
