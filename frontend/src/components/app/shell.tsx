@@ -7,7 +7,6 @@ import {
   MessageCircle,
   Mic,
   Plus,
-  UserRound,
 } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
@@ -50,15 +49,34 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-const MOBILE_NAV: NavItem[] = [
-  { href: "/app", label: "Home", icon: LayoutDashboard, exact: true },
-  { href: "/app/new", label: "New", icon: Plus },
-  { href: "/app/runs", label: "Runs", icon: LayoutList },
-  { href: "/app/coach", label: "Ask Ada", icon: MessageCircle },
-  { href: "/app/profile", label: "You", icon: UserRound },
-];
+/* Crafted tab icons from the mobile design canvas — thinner strokes and
+ * friendlier geometry than the stock set. */
+const TabIcon = {
+  home: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V21h5v-6h4v6h5V9.5" />
+    </svg>
+  ),
+  runs: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  ),
+  ask: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a8 8 0 1 1-3.1-6.3L21 5l-.6 3.2A8 8 0 0 1 21 12z" />
+    </svg>
+  ),
+  you: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c1.4-3.2 4-5 7-5s5.6 1.8 7 5" />
+    </svg>
+  ),
+} as const;
 
-const isActive = (pathname: string, item: NavItem) =>
+const isActive = (pathname: string, item: { href: string; exact?: boolean }) =>
   item.exact ? pathname === item.href : pathname.startsWith(item.href);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -147,35 +165,74 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        {/* Mobile: slim top bar + bottom tab bar */}
+        {/* Mobile: slim top bar + floating liquid-glass tab bar (from the
+            mobile design canvas: blurred pill, raised accent FAB for New run) */}
         <header className="fixed inset-x-0 top-0 z-20 flex items-center justify-between border-b border-line bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
           <Link href="/">
             <Logo />
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1.5">
+            <ThemeToggle />
+            <Link
+              href="/app/profile"
+              aria-label="Profile"
+              className="flex size-8 items-center justify-center rounded-full border border-accent/15 bg-accent-soft text-xs font-semibold uppercase text-accent"
+            >
+              {user.email[0]}
+            </Link>
+          </div>
         </header>
         <nav
-          className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-surface/95 backdrop-blur lg:hidden"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          className="fixed inset-x-4 bottom-0 z-20 lg:hidden"
+          style={{ marginBottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+          aria-label="Primary"
         >
-          <div className="mx-auto flex max-w-md items-stretch justify-around">
-            {MOBILE_NAV.map((item) => {
-              const { href, icon: Icon, label } = item;
-              const active = isActive(pathname, item);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-label={label}
-                  className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] ${
-                    active ? "text-accent" : "text-muted"
-                  }`}
-                >
-                  <Icon className="size-4" />
-                  {label}
-                </Link>
-              );
-            })}
+          <div className="mx-auto flex max-w-md items-center justify-around rounded-[32px] border border-line/90 bg-surface/80 px-2.5 py-2 shadow-lift backdrop-blur-xl">
+            {(
+              [
+                { href: "/app", label: "Home", icon: TabIcon.home, exact: true },
+                { href: "/app/runs", label: "Runs", icon: TabIcon.runs },
+              ] as const
+            ).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.label}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[9px] ${
+                  isActive(pathname, item) ? "font-semibold text-accent" : "text-muted"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
+            <Link
+              href="/app/new"
+              aria-label="New run"
+              className="-mt-7 flex size-12 items-center justify-center rounded-full bg-accent text-accent-ink shadow-[0_1px_2px_rgba(23,21,15,0.16),0_6px_16px_rgba(67,56,202,0.35)] transition-transform active:scale-95"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </Link>
+            {(
+              [
+                { href: "/app/coach", label: "Ask Ada", icon: TabIcon.ask },
+                { href: "/app/profile", label: "You", icon: TabIcon.you },
+              ] as const
+            ).map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.label}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1 text-[9px] ${
+                  isActive(pathname, item) ? "font-semibold text-accent" : "text-muted"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            ))}
           </div>
         </nav>
 

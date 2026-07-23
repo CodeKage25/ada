@@ -47,21 +47,29 @@ export default function InterviewPage() {
         >
           <ArrowLeft className="size-4" /> Back to run
         </Link>
-        <div className="mb-8 flex items-center justify-between gap-6">
-          <div>
-            <h1 className="display text-3xl">Your scorecard.</h1>
-            <p className="mt-2 max-w-sm text-sm text-muted">
-              Scored on substance, structure, and relevance to the role.
-            </p>
-          </div>
-          <ScoreRing value={scorecard.overall_score} max={10} size={112} stroke={8}>
-            <span className="display text-4xl">{scorecard.overall_score}</span>
+        {/* Centered verdict moment, per the mobile design canvas */}
+        <div className="relative mb-8 text-center">
+          <div
+            className="absolute -right-16 -top-20 -z-10 size-72 rounded-full bg-accent/[0.07] blur-3xl"
+            aria-hidden
+          />
+          <p className="eyebrow mb-5">Interview scored</p>
+          <ScoreRing value={scorecard.overall_score} max={10} size={132} stroke={8} className="mx-auto">
+            <span className="display text-5xl">{scorecard.overall_score}</span>
             <span className="mt-0.5 text-[11px] text-muted">out of 10</span>
           </ScoreRing>
+          <p className="display mt-4 text-2xl">
+            {scorecard.overall_score >= 8
+              ? "Strong hire signal."
+              : scorecard.overall_score >= 6
+                ? "Solid — sharpen the specifics."
+                : "Keep rehearsing. You'll get there."}
+          </p>
         </div>
-        <Card className="mb-8 border-l-2 !border-l-accent p-5">
+        <div className="mb-8 rounded-card border border-accent/20 bg-accent-soft p-5">
+          <p className="eyebrow mb-2 !text-[10px] !text-accent">Ada&apos;s note</p>
           <p className="text-sm leading-relaxed">{scorecard.summary}</p>
-        </Card>
+        </div>
         <div className="space-y-4">
           {scorecard.scores.map((s, i) => (
             <Card key={i} className="p-5 sm:p-6">

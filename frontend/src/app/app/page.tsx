@@ -110,21 +110,46 @@ export default function HomePage() {
           {greeting()}, {firstName(email)}.
         </h1>
         <p className="mt-3 text-sm text-muted">
-          Ada is ready — you&apos;re one run from your next role.
+          You&apos;re{" "}
+          <em className="display text-[15px] italic text-accent">one run</em> from
+          your next role.
         </p>
       </div>
 
-      {/* Pulse of the account */}
-      <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
-        {runs === null ? (
-          [0, 1, 2].map((i) => (
+      {/* Pulse of the account. Mobile: one segmented card with hairline
+          dividers (per the mobile design canvas); larger screens: three cards. */}
+      {runs === null ? (
+        <div className="mb-6 grid grid-cols-3 gap-3 sm:gap-4">
+          {[0, 1, 2].map((i) => (
             <Card key={i} className="p-5">
               <Skeleton className="h-9 w-14" />
               <Skeleton className="mt-2.5 h-3 w-20" />
             </Card>
-          ))
-        ) : (
-          <>
+          ))}
+        </div>
+      ) : (
+        <>
+          <Card className="mb-6 grid grid-cols-3 divide-x divide-line text-center sm:hidden">
+            <div className="px-2 py-4">
+              <p className="display text-3xl">{completed}</p>
+              <p className="mt-1 text-[10px] text-muted">
+                {completed === 1 ? "run" : "runs"}
+              </p>
+            </div>
+            <div className="px-2 py-4">
+              <p className="display text-3xl">{interviews}</p>
+              <p className="mt-1 text-[10px] text-muted">
+                {interviews === 1 ? "interview" : "interviews"}
+              </p>
+            </div>
+            <div className="px-2 py-4">
+              <p className={`display text-3xl ${topMatch !== null ? "text-accent" : "text-muted/60"}`}>
+                {topMatch !== null ? `${topMatch}%` : "—"}
+              </p>
+              <p className="mt-1 text-[10px] text-muted">top match</p>
+            </div>
+          </Card>
+          <div className="mb-6 hidden grid-cols-3 gap-4 sm:grid">
             <Card className="p-5">
               <p className="display text-4xl">{completed}</p>
               <p className="mt-1.5 text-xs text-muted">
@@ -144,7 +169,7 @@ export default function HomePage() {
                     <p className="display text-4xl">{topMatch}%</p>
                     <p className="mt-1.5 text-xs text-muted">top match</p>
                   </div>
-                  <ScoreRing value={topMatch} size={56} stroke={5} className="max-sm:hidden" />
+                  <ScoreRing value={topMatch} size={56} stroke={5} />
                 </>
               ) : (
                 <div>
@@ -153,9 +178,9 @@ export default function HomePage() {
                 </div>
               )}
             </Card>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
 
       <div className="mb-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         {/* Latest results, or the first-run invitation */}
@@ -175,15 +200,21 @@ export default function HomePage() {
             <h2 className="display mb-5 text-2xl">{latest.summary.target_role}.</h2>
             <div className="flex-1 space-y-3.5">
               {(latest.result.matches ?? []).slice(0, 3).map((m) => (
-                <div key={`${m.title}-${m.company}`}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-medium">
-                      {m.title} <span className="font-normal text-muted">· {m.company}</span>
-                    </p>
-                    <span className="display text-lg text-accent">{m.match}%</span>
-                  </div>
-                  <div className="mt-1">
-                    <ScoreBar value={m.match} />
+                <div key={`${m.title}-${m.company}`} className="flex items-center gap-2.5">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-line bg-surface-2 text-xs font-semibold text-muted">
+                    {m.company.slice(0, 2)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="min-w-0 truncate text-sm font-medium">
+                        {m.title}{" "}
+                        <span className="font-normal text-muted">· {m.company}</span>
+                      </p>
+                      <span className="display text-lg text-accent">{m.match}%</span>
+                    </div>
+                    <div className="mt-1">
+                      <ScoreBar value={m.match} />
+                    </div>
                   </div>
                 </div>
               ))}
