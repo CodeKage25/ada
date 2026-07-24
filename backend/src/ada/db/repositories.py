@@ -6,14 +6,33 @@ Idempotency and exactly-once execution are enforced here as atomic SQL:
   - RunRepository.claim_for_execution transitions PAID -> RUNNING via
     UPDATE ... WHERE status = PAID, so concurrent workers cannot both run the same job.
 """
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ada.db.models import Job, ProcessedEvent, Profile, Run, RunStatus
+
+# Filler words that carry no signal when matching a role name against job titles.
+_ROLE_STOPWORDS = {"a", "an", "and", "the", "of", "for", "in", "at", "to", "or"}
+
+
+def role_keywords(role: str) -> list[str]:
+    """Meaningful search tokens from a free-text role name.
+
+    Alphabetic tokens of 3+ characters, lowercased, stopwords removed, capped at
+    six. Tokens are letters-only by construction, so they are safe to embed in
+    ILIKE patterns without escaping.
+    """
+    words = re.findall(r"[a-zA-Z]{3,}", role.lower())
+    seen: list[str] = []
+    for w in words:
+        if w not in _ROLE_STOPWORDS and w not in seen:
+            seen.append(w)
+    return seen[:6]
 
 
 class EventRepository:
@@ -172,6 +191,27 @@ class JobRepository:
     async def add_many(self, jobs: list[Job]) -> None:
         self._s.add_all(jobs)
         await self._s.commit()
+
+    async def preview(self, role: str, *, sample_size: int = 4) -> tuple[int, list[Job]]:
+        """Cheap pre-payment teaser: keyword lookup of the role against job titles.
+
+        Deliberately NOT the paid matching — no embeddings, no ranking, no
+        reasons. Returns (total count, a few sample jobs) so the UI can show an
+        honest peek before checkout.
+        """
+        keywords = role_keywords(role)
+        if not keywords:
+            return 0, []
+        cond = or_(*(Job.title.ilike(f"%{k}%") for k in keywords))
+        count = (
+            await self._s.execute(select(func.count(Job.id)).where(cond))
+        ).scalar_one()
+        rows = (
+            await self._s.execute(
+                select(Job).where(cond).order_by(Job.id).limit(sample_size)
+            )
+        ).scalars()
+        return count, list(rows.all())
 
     async def knn(self, embedding: list[float], k: int) -> list[tuple[Job, float]]:
         """Nearest jobs by cosine distance. Returns (job, distance), closest first."""
