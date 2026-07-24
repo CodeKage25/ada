@@ -35,7 +35,9 @@ async def test_preview_counts_and_samples_without_paid_fields():
 
     await init_db()
     # A unique token keeps this test independent of seeded/previous data.
-    marker = f"zx{uuid.uuid4().hex[:8]}"
+    # Letters only: role_keywords keeps alphabetic runs of 3+, so any digit
+    # would split the marker into fragments too short to match.
+    marker = "zx" + uuid.uuid4().hex[:8].translate(str.maketrans("0123456789", "ghijklmnop"))
     zero_vec = [0.0] * EMBED_DIM
     async with _session_factory() as s:
         JobRepositorySession = JobRepository(s)
@@ -65,7 +67,9 @@ async def test_preview_counts_and_samples_without_paid_fields():
             ]
         )
     async with _session_factory() as s:
-        count, jobs = await JobRepository(s).preview(f"{marker} role")
+        # The trailing stopwords are dropped, leaving only the unique marker —
+        # a broad word like "role" could match rows seeded by other tests.
+        count, jobs = await JobRepository(s).preview(f"{marker} of the")
     assert count == 2
     titles = {j.title for j in jobs}
     assert titles == {f"{marker} Sales Manager", f"{marker} Regional Manager"}
