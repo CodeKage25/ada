@@ -54,6 +54,18 @@ function loadSaved(): Saved | null {
 const roleValid = (v: string) => v.trim().length >= 2 && /[a-zA-Z]{2,}/.test(v);
 const cvValid = (v: string) => v.trim().length >= 30;
 
+// One per broad industry — a nudge that Ada isn't tech-only, and a one-tap start.
+const ROLE_SUGGESTIONS = [
+  "Sales Manager",
+  "Registered Nurse",
+  "Accountant",
+  "Customer Success Lead",
+  "Civil Engineer",
+  "HR Business Partner",
+  "Product Manager",
+  "Operations Supervisor",
+] as const;
+
 function StepShell({
   step,
   children,
@@ -161,18 +173,26 @@ function NewRun() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The teaser: fetched on entering the step, once per role value.
-  useEffect(() => {
-    if (step !== "teaser") return;
-    const r = role.trim();
-    if (previewFor.current === r && preview && preview !== "error") return;
+  // The teaser: one fetch per role value. Errors stay put (no retry loop) —
+  // the error screen offers an explicit "try again" instead.
+  const fetchPreview = useCallback((r: string) => {
     previewFor.current = r;
     setPreview("loading");
     api
       .jobsPreview(r)
-      .then(setPreview)
-      .catch(() => setPreview("error"));
-  }, [step, role, preview]);
+      .then((p) => {
+        if (previewFor.current === r) setPreview(p);
+      })
+      .catch(() => {
+        if (previewFor.current === r) setPreview("error");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (step !== "teaser") return;
+    const r = role.trim();
+    if (previewFor.current !== r) fetchPreview(r);
+  }, [step, role, fetchPreview]);
 
   const pay = async () => {
     setBusy(true);
@@ -250,6 +270,26 @@ function NewRun() {
               className="!py-3.5 text-base"
               aria-label="Target role"
             />
+            <div className="mt-3.5 flex flex-wrap gap-2" aria-label="Role suggestions">
+              {ROLE_SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    setRole(s);
+                    save({ role: s });
+                    go("cv");
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    role === s
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-line text-muted hover:border-accent/60 hover:text-ink"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
             <div className="mt-6 flex items-center justify-between">
               <span className="text-xs text-muted">
                 {roleValid(role) ? "Enter ↵ to continue" : "A real role name unlocks the next step"}
@@ -325,10 +365,19 @@ function NewRun() {
       {step === "teaser" && (
         <StepShell step="teaser">
           {preview === "loading" || preview === null ? (
-            <div className="flex items-center gap-3 py-16 text-sm text-muted">
-              <Loader2 className="size-4 animate-spin" />
-              Checking the job board for {role.trim()} roles…
-            </div>
+            <>
+              <div className="flex items-center gap-3 py-16 text-sm text-muted">
+                <Loader2 className="size-4 animate-spin" />
+                Checking the job board for {role.trim()} roles…
+              </div>
+              <button
+                type="button"
+                onClick={() => go("cv")}
+                className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
+              >
+                <ArrowLeft className="size-4" /> Back
+              </button>
+            </>
           ) : preview === "error" ? (
             <>
               <h1 className="display text-3xl sm:text-4xl">The board&apos;s not answering.</h1>
@@ -336,6 +385,24 @@ function NewRun() {
                 I couldn&apos;t get a quick look at the job board just now — no matter.
                 The full run does its own, much deeper search either way.
               </p>
+              <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => go("cv")}
+                  className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
+                >
+                  <ArrowLeft className="size-4" /> Back
+                </button>
+                <div className="flex items-center gap-3">
+                  <Button variant="secondary" onClick={() => fetchPreview(role.trim())}>
+                    Try again
+                  </Button>
+                  <Button onClick={() => go("pay")} className="group">
+                    Skip the peek — continue
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                  </Button>
+                </div>
+              </div>
             </>
           ) : preview.count === 0 ? (
             <>
@@ -348,6 +415,21 @@ function NewRun() {
                 Manager” rather than “Regional FMCG Sales Lead”) usually surfaces
                 more. The full run also searches far more deeply than this glance.
               </p>
+              <div className="mt-6 flex flex-wrap gap-2" aria-label="Broader title suggestions">
+                {ROLE_SUGGESTIONS.slice(0, 4).map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      setRole(s);
+                      save({ role: s });
+                    }}
+                    className="rounded-full border border-line px-3 py-1.5 text-xs text-muted transition-colors hover:border-accent/60 hover:text-ink"
+                  >
+                    Peek at {s}
+                  </button>
+                ))}
+              </div>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Button variant="secondary" onClick={() => go("role")}>
                   <ArrowLeft className="size-4" /> Try a different title
