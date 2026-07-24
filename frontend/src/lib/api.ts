@@ -105,10 +105,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   // auth
-  requestLink: (email: string) =>
-    request<{ status: string }>("/api/auth/request-link", {
+  signup: (email: string, password: string) =>
+    request<{ email: string }>("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  login: (email: string, password: string) =>
+    request<{ email: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  requestReset: (email: string) =>
+    request<{ status: string }>("/api/auth/request-reset", {
       method: "POST",
       body: JSON.stringify({ email }),
+    }),
+  resetPassword: (token: string, password: string) =>
+    request<{ status: string }>("/api/auth/reset", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
     }),
   me: () => request<{ email: string }>("/api/auth/me"),
   logout: () => request<{ status: string }>("/api/auth/logout", { method: "POST" }),

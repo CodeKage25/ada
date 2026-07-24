@@ -130,7 +130,7 @@ export default function ProfilePage() {
           </span>
           <div>
             <p className="text-sm font-medium">{email}</p>
-            <p className="text-xs text-muted">Signed in with a magic link</p>
+            <p className="text-xs text-muted">Signed in with email and password</p>
           </div>
         </div>
         <Button variant="secondary" onClick={logout}>

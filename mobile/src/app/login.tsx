@@ -1,51 +1,54 @@
-/** Magic-link sign-in. The emailed link carries a one-time token — tapping
- *  "I've got my link" lets the user paste it (or a deep link `ada://login?token=…`
- *  delivers it), then the app exchanges it for a native session cookie. */
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, TextInput, View } from "react-native";
+/** Email + password sign-in / sign-up. Signing in or up mints the native session
+ *  cookie; "Forgot password?" emails a reset link that opens the web reset page. */
+import { router } from "expo-router";
+import { useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { fonts, radius, useTheme } from "@/lib/theme";
 import { Button, Card, Logo, Sans, Serif } from "@/components/ui";
 
+type Mode = "signin" | "signup";
+
 export default function LoginScreen() {
   const t = useTheme();
-  const { token: linkedToken } = useLocalSearchParams<{ token?: string }>();
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const verify = async (value: string) => {
+  const submit = async () => {
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      await api.verify(value.trim());
+      if (mode === "signup") await api.signup(email.trim(), password);
+      else await api.login(email.trim(), password);
       router.replace("/");
-    } catch {
-      setError("That link is invalid or expired — request a fresh one.");
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Something went wrong — try again.",
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  // Deep link ada://login?token=… straight from the email.
-  useEffect(() => {
-    if (linkedToken) void verify(linkedToken);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [linkedToken]);
-
-  const requestLink = async () => {
+  const forgot = async () => {
+    if (!email.includes("@")) {
+      setError("Enter your email first, then tap Forgot password.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      await api.requestLink(email.trim());
-      setSent(true);
+      await api.requestReset(email.trim());
+      setNotice("If that email has an account, a reset link is on its way.");
     } catch {
-      setError("Couldn't send the link — try again in a moment.");
+      setError("Couldn't send the reset link — try again in a moment.");
     } finally {
       setBusy(false);
     }
@@ -73,45 +76,63 @@ export default function LoginScreen() {
           <Logo size={34} />
         </View>
         <Card style={{ width: "100%", maxWidth: 380, gap: 14 }} pad={24}>
-          {sent ? (
-            <>
-              <Serif size={24}>Check your inbox.</Serif>
-              <Sans color={t.muted}>
-                A one-time sign-in link is on its way to {email}. Open it on this phone —
-                or paste the token from the link below.
-              </Sans>
-              <TextInput
-                value={token}
-                onChangeText={setToken}
-                placeholder="Paste your sign-in token"
-                placeholderTextColor={`${t.muted}99`}
-                autoCapitalize="none"
-                style={fieldStyle}
-              />
-              {error ? <Sans size={12} color={t.danger}>{error}</Sans> : null}
-              <Button label="Sign in" loading={busy} disabled={!token.trim()} onPress={() => verify(token)} />
-            </>
-          ) : (
-            <>
-              <Serif size={24}>Sign in to Ada.</Serif>
-              <Sans color={t.muted}>No passwords. We email you a one-time link.</Sans>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor={`${t.muted}99`}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                style={fieldStyle}
-              />
-              {error ? <Sans size={12} color={t.danger}>{error}</Sans> : null}
-              <Button label="Email me a link" loading={busy} disabled={!email.includes("@")} onPress={requestLink} />
-            </>
-          )}
+          <Serif size={24}>
+            {mode === "signup" ? "Create your account." : "Welcome back."}
+          </Serif>
+          <Sans color={t.muted}>
+            {mode === "signup"
+              ? "One account runs the whole loop — CV, matches, interview."
+              : "Sign in to pick up where Ada left off."}
+          </Sans>
+          {notice ? <Sans size={12} color={t.success}>{notice}</Sans> : null}
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            placeholderTextColor={`${t.muted}99`}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            style={fieldStyle}
+          />
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            placeholder={mode === "signup" ? "At least 8 characters" : "Your password"}
+            placeholderTextColor={`${t.muted}99`}
+            autoCapitalize="none"
+            secureTextEntry
+            textContentType={mode === "signup" ? "newPassword" : "password"}
+            style={fieldStyle}
+          />
+          {error ? <Sans size={12} color={t.danger}>{error}</Sans> : null}
+          <Button
+            label={mode === "signup" ? "Create account" : "Sign in"}
+            loading={busy}
+            disabled={!email.includes("@") || password.length < (mode === "signup" ? 8 : 1)}
+            onPress={submit}
+          />
+          {mode === "signin" ? (
+            <Pressable onPress={forgot} style={{ alignSelf: "center" }}>
+              <Sans size={12} color={t.muted}>Forgot password?</Sans>
+            </Pressable>
+          ) : null}
         </Card>
-        <Sans size={11} color={t.muted} style={{ marginTop: 20 }}>
-          New here? The same link signs you up.
-        </Sans>
+        <Pressable
+          onPress={() => {
+            setMode(mode === "signin" ? "signup" : "signin");
+            setError("");
+            setNotice("");
+            setPassword("");
+          }}
+          style={{ marginTop: 20 }}
+        >
+          <Sans size={11} color={t.muted}>
+            {mode === "signin"
+              ? "New to Ada?  Create an account"
+              : "Already have an account?  Sign in"}
+          </Sans>
+        </Pressable>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

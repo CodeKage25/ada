@@ -1,6 +1,6 @@
 /** Typed client for the Ada backend — the same endpoints the web app uses.
- *  Point EXPO_PUBLIC_API_URL at the FastAPI origin; cookies (magic-link
- *  session) persist through React Native's native networking stack. */
+ *  Point EXPO_PUBLIC_API_URL at the FastAPI origin; the session cookie
+ *  persists through React Native's native networking stack. */
 
 export const API_BASE =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:8080";
@@ -96,14 +96,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   // auth
-  requestLink: (email: string) =>
-    request<{ status: string }>("/api/auth/request-link", {
+  signup: (email: string, password: string) =>
+    request<{ email: string }>("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  login: (email: string, password: string) =>
+    request<{ email: string }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  requestReset: (email: string) =>
+    request<{ status: string }>("/api/auth/request-reset", {
       method: "POST",
       body: JSON.stringify({ email }),
     }),
   me: () => request<{ email: string }>("/api/auth/me"),
-  verify: (token: string) =>
-    request<{ status: string }>(`/api/auth/verify?token=${encodeURIComponent(token)}`),
   logout: () => request<{ status: string }>("/api/auth/logout", { method: "POST" }),
 
   // runs

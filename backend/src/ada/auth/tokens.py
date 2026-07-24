@@ -1,6 +1,6 @@
-"""Token primitives for magic links and sessions.
+"""Token primitives for password-reset links and sessions.
 
-Raw tokens leave the process exactly once (in the email link / Set-Cookie header);
+Raw tokens leave the process exactly once (in the reset link / Set-Cookie header);
 only sha256 hashes are persisted, so a database leak exposes no usable credentials.
 """
 import hashlib

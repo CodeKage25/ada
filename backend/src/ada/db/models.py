@@ -3,8 +3,8 @@
 Run: one per paid session; holds inputs and the generated deliverables (rewritten CV,
 job matches, interview questions, and scored answers). ProcessedEvent: idempotency
 ledger for webhook events. Job: seeded reference data with a pgvector embedding.
-User/AuthToken/Session: magic-link authentication — tokens are stored hashed and are
-single-use; sessions are opaque tokens hashed at rest.
+User/AuthToken/Session: email+password authentication — passwords are bcrypt-hashed,
+reset tokens are stored hashed and single-use, and sessions are opaque tokens hashed at rest.
 """
 from datetime import datetime
 from enum import StrEnum
@@ -87,11 +87,13 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    # bcrypt hash; nullable so legacy (pre-password) rows remain valid until they set one.
+    password_hash: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AuthToken(Base):
-    """Single-use magic-link token. Only the sha256 hash is stored."""
+    """Single-use password-reset token. Only the sha256 hash is stored."""
     __tablename__ = "auth_tokens"
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)

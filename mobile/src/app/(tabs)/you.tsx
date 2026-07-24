@@ -102,7 +102,7 @@ export default function YouScreen() {
             {email}
           </Sans>
           <Eyebrow style={{ marginTop: 3, textTransform: "none", letterSpacing: 0 }}>
-            Signed in with a magic link
+            Signed in with email and password
           </Eyebrow>
         </View>
         <Button

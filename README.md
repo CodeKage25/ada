@@ -5,14 +5,14 @@ no human in the workflow:
 
 **intake (typed or voice) → ATS CV rewrite → job matching → mock interview → scored feedback**
 
-Plus an always-on side: magic-link accounts, an imported LinkedIn career profile, and
+Plus an always-on side: email + password accounts, an imported LinkedIn career profile, and
 **Ask Ada** — a streaming coaching chat grounded in the user's profile and run history.
 
 ## Monorepo
 
 ```
 backend/    FastAPI + LangGraph agent on Gemini/Vertex, Postgres+pgvector, Alembic,
-            Paystack + Stripe, magic-link auth, SSE chat        -> backend/README.md
+            Paystack + Stripe, email+password auth, SSE chat    -> backend/README.md
 frontend/   Next.js 15 app: landing page + product (runs, interview, coach,
             voice intake, profile)                              -> frontend/README.md
 ```
@@ -60,7 +60,8 @@ make dev
 cd frontend && pnpm install && pnpm dev
 ```
 
-Local auth needs no email provider — the magic link is printed in the backend logs.
+Local auth needs no email provider — sign up with any email + password, and password-reset
+links are printed in the backend logs instead of sent.
 
 ## Verification
 

@@ -1,4 +1,4 @@
-"""Magic-link email delivery via the Resend HTTP API.
+"""Password-reset email delivery via the Resend HTTP API.
 
 In local dev the link is logged instead of sent, so the flow works without a
 provider account.
@@ -11,19 +11,21 @@ from ada.observability import log
 _RESEND_URL = "https://api.resend.com/emails"
 
 
-async def send_magic_link(email: str, link: str) -> None:
+async def send_reset_link(email: str, link: str) -> None:
     s = get_settings()
     if s.app_env == "local":
-        log.info("magic_link_local", email=email, link=link)
+        log.info("reset_link_local", email=email, link=link)
         return
     payload = {
         "from": s.email_from,
         "to": [email],
-        "subject": "Sign in to Ada",
+        "subject": "Reset your Ada password",
         "html": (
-            "<p>Click to sign in to Ada. This link works once and expires in 15 minutes.</p>"
-            f'<p><a href="{link}">Sign in to Ada</a></p>'
-            "<p>If you didn't request this, you can ignore this email.</p>"
+            "<p>We received a request to reset your Ada password. This link works once "
+            "and expires in 30 minutes.</p>"
+            f'<p><a href="{link}">Reset your password</a></p>'
+            "<p>If you didn't request this, you can safely ignore this email — your "
+            "password won't change.</p>"
         ),
     }
     headers = {"Authorization": f"Bearer {s.resend_api_key}"}

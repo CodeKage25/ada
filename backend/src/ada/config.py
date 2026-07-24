@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Runs stuck in PAID longer than this had their in-process dispatch lost — recover them.
     stuck_run_seconds: int = 300
 
-    # auth (magic links)
+    # auth (email + password; email used for password-reset links)
     frontend_origin: str = "http://localhost:3000"
     resend_api_key: str = Field(default="", repr=False)
     email_from: str = "Ada <auth@ada.local>"
@@ -79,9 +79,9 @@ class Settings(BaseSettings):
         if self.allowed_origin == "*":
             missing.append("ALLOWED_ORIGIN (wildcard CORS is not allowed in prod)")
         if not self.resend_api_key:
-            missing.append("RESEND_API_KEY (magic-link delivery)")
+            missing.append("RESEND_API_KEY (password-reset email delivery)")
         if self.frontend_origin.startswith("http://localhost"):
-            missing.append("FRONTEND_ORIGIN (magic links must point at the real app)")
+            missing.append("FRONTEND_ORIGIN (reset links must point at the real app)")
         if missing:
             raise RuntimeError(
                 f"Ada misconfigured for {self.app_env}: missing {', '.join(missing)}"

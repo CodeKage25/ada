@@ -10,8 +10,8 @@ to the backend WebSocket (`NEXT_PUBLIC_WS_URL`) because rewrites don't carry upg
 ```
 /                        landing: hero with live self-running demo, capability cards,
                          how-it-works, pricing, FAQs
-/login                   magic-link request (no passwords)
-/auth/verify             hands the emailed token to the backend via the proxy
+/login                   email + password sign in / sign up / forgot
+/auth/reset              set a new password from an emailed reset link
 /app                     auth-gated shell (sidebar) -> redirects to /app/runs
 /app/new                 intake -> Paystack inline / Stripe redirect -> live progress
 /app/runs                run history            /app/runs/[id]   CV + matches + questions

@@ -1,7 +1,7 @@
 # Ada backend
 
 FastAPI service that runs the whole business: paid agent runs (LangGraph over Gemini on
-Vertex AI), dual-provider payments, magic-link auth, career-profile grounding, and a
+Vertex AI), dual-provider payments, email+password auth, career-profile grounding, and a
 streaming coaching chat.
 
 ## Layout
@@ -13,7 +13,7 @@ src/ada/
   resilience.py        bounded retry w/ backoff for transient LLM/API failures
   vertex.py            shared Vertex/Gemini client (request timeout)
   main.py              app factory (API-only; frontend is a separate service)
-  auth/                magic-link tokens (hashed, single-use), sessions, mailer (Resend)
+  auth/                bcrypt passwords, reset tokens (hashed, single-use), sessions, mailer (Resend)
   api/routes/          health/readyz · auth · profile · chat (SSE) · runs · webhooks · voice (WS)
   payments/            paystack (sig + server-side verify) · stripe (checkout + verify)
   db/                  pooled async session · models · repositories (atomic money-path SQL)
@@ -34,7 +34,7 @@ tests/                 unit + Postgres-gated integration (RUN_DB_TESTS=1)
 | Area | Route | Notes |
 |---|---|---|
 | Health | `GET /api/healthz` · `GET /api/readyz` | readyz pings the DB |
-| Auth | `POST /api/auth/request-link` → `GET /api/auth/verify` → cookie; `me`, `logout` | no account enumeration; tokens hashed, single-use, 15-min TTL |
+| Auth | `POST /api/auth/signup` · `login` → cookie; `request-reset` → `reset`; `me`, `logout` | bcrypt passwords; generic 401 + always-202 reset = no account enumeration; reset tokens hashed, single-use, 30-min TTL |
 | Profile | `GET/PUT /api/profile` | imported LinkedIn text grounds chat + runs |
 | Chat | `POST /api/chat` (SSE) | streams deltas; grounded in profile + last runs |
 | Runs | `POST /api/runs` · `GET /api/runs` · `GET /api/runs/{id}` · `POST /api/runs/{id}/interview` | owned runs are private; creation works with or without a session |
@@ -64,7 +64,7 @@ python -m ada.seed             # embeds the jobs corpus (needs GCP creds)
 uvicorn ada.main:app --reload --port 8080
 ```
 
-Local `APP_ENV=local`: schema auto-creates on boot, magic links are logged not emailed.
+Local `APP_ENV=local`: schema auto-creates on boot, password-reset links are logged not emailed.
 
 ## Test
 
