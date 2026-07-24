@@ -76,6 +76,17 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface JobPeek {
+  title: string;
+  company: string;
+  location: string;
+}
+
+export interface JobsPreview {
+  count: number;
+  samples: JobPeek[];
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -138,6 +149,9 @@ export const api = {
   }) => request<CreateRunOut>("/api/runs", { method: "POST", body: JSON.stringify(body) }),
   listRuns: () => request<RunSummary[]>("/api/runs"),
   getRun: (id: string) => request<RunResult>(`/api/runs/${id}`),
+  /** Cheap pre-payment teaser: count + a few raw titles, no scores/reasons. */
+  jobsPreview: (role: string) =>
+    request<JobsPreview>(`/api/jobs/preview?role=${encodeURIComponent(role)}`),
   scoreInterview: (id: string, answers: string[]) =>
     request<Scorecard>(`/api/runs/${id}/interview`, {
       method: "POST",
