@@ -52,6 +52,19 @@ export interface RunSummary {
   has_interview: boolean;
 }
 
+/** How each run status reads in the UI — label plus the badge tone it maps to.
+ *  Single source of truth so the dashboard and runs list can't drift apart. */
+export const RUN_STATUS: Record<
+  RunStatus,
+  { label: string; tone: "neutral" | "accent" | "success" | "warn" | "danger"; pulse?: boolean }
+> = {
+  pending_payment: { label: "Awaiting payment", tone: "warn" },
+  paid: { label: "Queued", tone: "accent" },
+  running: { label: "Running", tone: "accent", pulse: true },
+  complete: { label: "Complete", tone: "success" },
+  failed: { label: "Failed", tone: "danger" },
+};
+
 export interface Profile {
   profile_text: string;
   linkedin_url: string | null;

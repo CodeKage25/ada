@@ -14,17 +14,8 @@ import { Suspense, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { RunProgress } from "@/components/run/progress";
-import { Button, Card, PageHeader, ScoreBar, Skeleton } from "@/components/ui";
+import { Button, Card, PageHeader, ScoreBar, SectionTitle, Skeleton } from "@/components/ui";
 import { api, type RunResult } from "@/lib/api";
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-muted">
-      <span className="h-px w-6 bg-accent" aria-hidden />
-      {children}
-    </h2>
-  );
-}
 
 function RunSkeleton() {
   return (

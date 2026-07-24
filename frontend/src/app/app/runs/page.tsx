@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Plus, Sparkles } from "lucide-react";
+import { ChevronRight, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -12,14 +12,16 @@ import {
   Skeleton,
   StatusBadge,
 } from "@/components/ui";
-import { api, type RunSummary } from "@/lib/api";
+import { api, RUN_STATUS, type RunSummary } from "@/lib/api";
 
-const STATUS: Record<string, { label: string; tone: "neutral" | "accent" | "success" | "warn" | "danger"; pulse?: boolean }> = {
-  pending_payment: { label: "Awaiting payment", tone: "warn" },
-  paid: { label: "Queued", tone: "accent" },
-  running: { label: "Running", tone: "accent", pulse: true },
-  complete: { label: "Complete", tone: "success" },
-  failed: { label: "Failed", tone: "danger" },
+/** Left status rail colour per badge tone — runs read as tracked processes,
+ *  not just links, so the state is legible before you read a word. */
+const RAIL: Record<string, string> = {
+  neutral: "bg-line",
+  accent: "bg-accent",
+  success: "bg-success",
+  warn: "bg-warn",
+  danger: "bg-danger",
 };
 
 function RunListSkeleton() {
@@ -72,10 +74,15 @@ export default function RunsPage() {
       ) : (
         <div className="space-y-3">
           {runs.map((run) => {
-            const status = STATUS[run.status] ?? { label: run.status, tone: "neutral" as const };
+            const status = RUN_STATUS[run.status] ?? { label: run.status, tone: "neutral" as const };
             return (
               <Link key={run.run_id} href={`/app/runs/${run.run_id}`} className="group block">
-                <Card hover className="flex items-center justify-between gap-4 px-5 py-4">
+                <Card hover className="relative flex items-center justify-between gap-4 overflow-hidden py-4 pl-6 pr-5">
+                  {/* Status rail: widens on hover — the row's affordance, no nudging arrow. */}
+                  <span
+                    className={`absolute inset-y-0 left-0 w-1 transition-all duration-200 group-hover:w-1.5 ${RAIL[status.tone] ?? RAIL.neutral}`}
+                    aria-hidden
+                  />
                   <div className="min-w-0">
                     <p className="truncate font-medium">{run.target_role}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -94,7 +101,7 @@ export default function RunsPage() {
                       </span>
                     </div>
                   </div>
-                  <ArrowUpRight className="size-4 shrink-0 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink" />
+                  <ChevronRight className="size-4 shrink-0 text-muted/50 transition-colors group-hover:text-ink" />
                 </Card>
               </Link>
             );

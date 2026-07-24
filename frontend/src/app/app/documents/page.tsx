@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -44,30 +44,37 @@ export default function DocumentsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
-          {docs.map((doc) => (
-            <Link key={doc.run_id} href={`/app/runs/${doc.run_id}`} className="group block">
-              <Card hover className="flex items-center justify-between px-5 py-4">
-                <div className="flex items-center gap-3.5">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft">
-                    <FileText className="size-4 text-accent" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">CV — {doc.target_role}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {new Date(doc.created_at).toLocaleDateString(undefined, {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                </div>
-                <ArrowUpRight className="size-4 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-ink" />
-              </Card>
+        // One container, divided rows — a file list, not a stack of cards. Rows
+        // wash on hover (no lift) so this reads distinctly from the runs list.
+        <Card className="divide-y divide-line overflow-hidden">
+          {docs.map((doc, i) => (
+            <Link
+              key={doc.run_id}
+              href={`/app/runs/${doc.run_id}`}
+              className="group flex items-center gap-3.5 px-4 py-3.5 transition-colors first:rounded-t-card last:rounded-b-card hover:bg-line/30 sm:px-5"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft">
+                <FileText className="size-4 text-accent" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">CV — {doc.target_role}</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {new Date(doc.created_at).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              <span className="hidden shrink-0 text-xs tabular-nums text-muted/60 sm:block">
+                #{String(docs.length - i).padStart(2, "0")}
+              </span>
+              <span className="text-xs font-medium text-muted opacity-0 transition-opacity group-hover:opacity-100">
+                Open
+              </span>
             </Link>
           ))}
-        </div>
+        </Card>
       )}
     </>
   );

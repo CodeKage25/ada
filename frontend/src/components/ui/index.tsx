@@ -141,6 +141,25 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** Uppercase heading with a short accent rule — opens sections inside app screens
+ *  (run detail, dashboard) where a full serif PageHeader would be too loud. */
+export function SectionTitle({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <h2
+      className={`flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-muted ${className}`}
+    >
+      <span className="h-px w-6 bg-accent" aria-hidden />
+      {children}
+    </h2>
+  );
+}
+
 type BadgeTone = "neutral" | "accent" | "success" | "warn" | "danger";
 
 const badgeStyles: Record<BadgeTone, string> = {

@@ -19,18 +19,11 @@ import {
   Card,
   ScoreBar,
   ScoreRing,
+  SectionTitle,
   Skeleton,
   StatusBadge,
 } from "@/components/ui";
-import { api, type RunResult, type RunSummary } from "@/lib/api";
-
-const STATUS: Record<string, { label: string; tone: "neutral" | "accent" | "success" | "warn" | "danger"; pulse?: boolean }> = {
-  pending_payment: { label: "Awaiting payment", tone: "warn" },
-  paid: { label: "Queued", tone: "accent" },
-  running: { label: "Running", tone: "accent", pulse: true },
-  complete: { label: "Complete", tone: "success" },
-  failed: { label: "Failed", tone: "danger" },
-};
+import { api, RUN_STATUS, type RunResult, type RunSummary } from "@/lib/api";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -335,10 +328,7 @@ export default function HomePage() {
       {recent.length > 0 && (
         <section>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-muted">
-              <span className="h-px w-6 bg-accent" aria-hidden />
-              Recent runs
-            </h2>
+            <SectionTitle>Recent runs</SectionTitle>
             <Link
               href="/app/runs"
               className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline"
@@ -348,7 +338,7 @@ export default function HomePage() {
           </div>
           <div className="space-y-2.5">
             {recent.map((run) => {
-              const status = STATUS[run.status] ?? { label: run.status, tone: "neutral" as const };
+              const status = RUN_STATUS[run.status] ?? { label: run.status, tone: "neutral" as const };
               return (
                 <Link key={run.run_id} href={`/app/runs/${run.run_id}`} className="group block">
                   <Card hover className="flex items-center justify-between gap-4 px-5 py-3.5">
