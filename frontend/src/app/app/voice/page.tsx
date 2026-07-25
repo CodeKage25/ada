@@ -85,7 +85,7 @@ export default function VoicePage() {
           cleanup();
           router.push("/app/new");
         } else if (msg.type === "error") {
-          setError(msg.message ?? "Voice intake is unavailable right now.");
+          setError(msg.message ?? "Ada's voice is unavailable right now.");
           setState("error");
           cleanup();
         }
@@ -146,12 +146,12 @@ export default function VoicePage() {
           />
           <div className="relative flex flex-col items-center px-7 pb-7 pt-10 text-center">
             <p className="eyebrow mb-2 !text-[#a09a8c]">
-              Voice intake{state === "live" ? ` · ${clock}` : ""}
+              In conversation{state === "live" ? ` · ${clock}` : ""}
             </p>
             <h2 className="display mb-9 text-3xl">
-              Tell Ada about
+              Talking with Ada
               <br />
-              your career.
+              about your work.
             </h2>
             <div className="relative mb-8 size-32">
               {state === "live" &&
@@ -190,7 +190,7 @@ export default function VoicePage() {
             )}
             <p className="text-sm text-[#a09a8c]">
               {state === "connecting" && "Connecting to Ada..."}
-              {state === "live" && "Ada is listening — speak naturally."}
+              {state === "live" && "Just talk — Ada replies out loud. Interrupt any time."}
               {state === "extracting" && "Wrapping up — drafting your run..."}
             </p>
             {transcript && (
