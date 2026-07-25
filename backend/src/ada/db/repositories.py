@@ -14,7 +14,15 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ada.db.models import Job, ProcessedEvent, Profile, Run, RunStatus
+from ada.db.models import (
+    Application,
+    ApplicationStatus,
+    Job,
+    ProcessedEvent,
+    Profile,
+    Run,
+    RunStatus,
+)
 
 # Filler words that carry no signal when matching a role name against job titles.
 _ROLE_STOPWORDS = {"a", "an", "and", "the", "of", "for", "in", "at", "to", "or"}
@@ -181,10 +189,31 @@ class ProfileRepository:
             raise RuntimeError(f"profile missing immediately after upsert for {user_id}")
         return profile
 
+    async def set_identity(
+        self, *, user_id: str, full_name: str, phone: str | None
+    ) -> Profile:
+        stmt = (
+            insert(Profile)
+            .values(user_id=user_id, profile_text="", full_name=full_name, phone=phone)
+            .on_conflict_do_update(
+                index_elements=["user_id"],
+                set_={"full_name": full_name, "phone": phone},
+            )
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+        profile = await self._s.get(Profile, user_id)
+        if profile is None:
+            raise RuntimeError(f"profile missing immediately after upsert for {user_id}")
+        return profile
+
 
 class JobRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._s = session
+
+    async def get(self, job_id: int) -> Job | None:
+        return await self._s.get(Job, job_id)
 
     async def count(self) -> int:
         return (await self._s.execute(select(func.count(Job.id)))).scalar_one()
@@ -260,3 +289,62 @@ class JobRepository:
         )
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], float(row[1])) for row in rows]
+
+
+class ApplicationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def create_or_get(
+        self, *, application_id: str, user_id: str, job_id: int, run_id: str | None
+    ) -> tuple[Application, bool]:
+        stmt = (
+            insert(Application)
+            .values(
+                id=application_id, user_id=user_id, job_id=job_id, run_id=run_id,
+                status=ApplicationStatus.PREPARING,
+            )
+            .on_conflict_do_nothing(constraint="uq_application_user_job")
+            .returning(Application.id)
+        )
+        created = (await self._s.execute(stmt)).scalar_one_or_none() is not None
+        await self._s.commit()
+        existing = (
+            await self._s.execute(
+                select(Application).where(
+                    Application.user_id == user_id, Application.job_id == job_id
+                )
+            )
+        ).scalar_one()
+        return existing, created
+
+    async def get(self, application_id: str) -> Application | None:
+        return await self._s.get(Application, application_id)
+
+    async def set_status(
+        self,
+        application_id: str,
+        status: ApplicationStatus,
+        *,
+        detail: str | None = None,
+    ) -> None:
+        values: dict[str, Any] = {"status": status, "detail": detail}
+        if status == ApplicationStatus.SUBMITTED:
+            values["submitted_at"] = datetime.now(UTC)
+        await self._s.execute(
+            update(Application).where(Application.id == application_id).values(**values)
+        )
+        await self._s.commit()
+
+    async def list_by_user(
+        self, user_id: str, *, limit: int = 100
+    ) -> list[tuple[Application, Job]]:
+        stmt = (
+            select(Application, Job)
+            .join(Job, Job.id == Application.job_id)
+            .where(Application.user_id == user_id)
+            .order_by(Application.created_at.desc())
+            .limit(limit)
+        )
+        rows = (await self._s.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]
