@@ -23,6 +23,7 @@ from ada.db.models import (
     Run,
     RunStatus,
     UploadedDocument,
+    UserMemory,
 )
 
 # Filler words that carry no signal when matching a role name against job titles.
@@ -424,3 +425,65 @@ class ApplicationRepository:
         )
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], row[1]) for row in rows]
+
+
+class UserMemoryRepository:
+    """Long-term facts Ada keeps per user. Capped; oldest fall off first."""
+
+    MAX_PER_USER = 150
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def add_many(
+        self, user_id: str, facts: list[tuple[str, list[float]]], source: str = "chat"
+    ) -> int:
+        for content, embedding in facts:
+            self._s.add(
+                UserMemory(user_id=user_id, content=content, source=source, embedding=embedding)
+            )
+        await self._s.commit()
+        await self._prune(user_id)
+        return len(facts)
+
+    async def list_for_user(self, user_id: str) -> list[UserMemory]:
+        stmt = (
+            select(UserMemory)
+            .where(UserMemory.user_id == user_id)
+            .order_by(UserMemory.created_at.desc())
+        )
+        return list((await self._s.execute(stmt)).scalars())
+
+    async def recall(self, user_id: str, embedding: list[float], k: int) -> list[UserMemory]:
+        """The user's memories nearest to the query, closest first."""
+        distance = UserMemory.embedding.cosine_distance(embedding)
+        stmt = (
+            select(UserMemory)
+            .where(UserMemory.user_id == user_id)
+            .order_by(distance)
+            .limit(k)
+        )
+        return list((await self._s.execute(stmt)).scalars())
+
+    async def delete_for_user(self, memory_id: int, user_id: str) -> bool:
+        memory = await self._s.get(UserMemory, memory_id)
+        if memory is None or memory.user_id != user_id:
+            return False
+        await self._s.delete(memory)
+        await self._s.commit()
+        return True
+
+    async def _prune(self, user_id: str) -> None:
+        stmt = (
+            select(UserMemory.id)
+            .where(UserMemory.user_id == user_id)
+            .order_by(UserMemory.created_at.desc())
+            .offset(self.MAX_PER_USER)
+        )
+        stale = list((await self._s.execute(stmt)).scalars())
+        if stale:
+            for memory_id in stale:
+                memory = await self._s.get(UserMemory, memory_id)
+                if memory is not None:
+                    await self._s.delete(memory)
+            await self._s.commit()
