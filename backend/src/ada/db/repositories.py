@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ada.db.models import (
     Application,
     ApplicationStatus,
+    ChatTurn,
     Job,
     ProcessedEvent,
     Profile,
@@ -487,3 +488,46 @@ class UserMemoryRepository:
                 if memory is not None:
                     await self._s.delete(memory)
             await self._s.commit()
+
+
+class ChatMessageRepository:
+    """The user's rolling Ask Ada conversation; oldest turns beyond the cap are dropped."""
+
+    MAX_PER_USER = 400
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def append(self, user_id: str, role: str, content: str) -> None:
+        self._s.add(ChatTurn(user_id=user_id, role=role, content=content))
+        await self._s.commit()
+
+    async def list_recent(self, user_id: str, limit: int = 100) -> list[ChatTurn]:
+        """The newest `limit` turns, returned oldest-first for direct rendering."""
+        stmt = (
+            select(ChatTurn)
+            .where(ChatTurn.user_id == user_id)
+            .order_by(ChatTurn.id.desc())
+            .limit(limit)
+        )
+        rows = list((await self._s.execute(stmt)).scalars())
+        return list(reversed(rows))
+
+    async def clear(self, user_id: str) -> None:
+        stmt = select(ChatTurn).where(ChatTurn.user_id == user_id)
+        for turn in (await self._s.execute(stmt)).scalars():
+            await self._s.delete(turn)
+        await self._s.commit()
+
+    async def prune(self, user_id: str) -> None:
+        stmt = (
+            select(ChatTurn.id)
+            .where(ChatTurn.user_id == user_id)
+            .order_by(ChatTurn.id.desc())
+            .offset(self.MAX_PER_USER)
+        )
+        for turn_id in (await self._s.execute(stmt)).scalars():
+            turn = await self._s.get(ChatTurn, turn_id)
+            if turn is not None:
+                await self._s.delete(turn)
+        await self._s.commit()

@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ada.auth.dependencies import current_user
 from ada.db.models import User
-from ada.db.repositories import ProfileRepository, RunRepository, UserMemoryRepository
+from ada.db.repositories import (
+    ChatMessageRepository,
+    ProfileRepository,
+    RunRepository,
+    UserMemoryRepository,
+)
 from ada.db.session import get_session
 from ada.services.coach import CoachService
 from ada.services.memory import MemoryService
@@ -54,8 +59,17 @@ async def chat(
         except Exception as exc:  # noqa: BLE001 — stream errors must reach the client
             yield f"data: {json.dumps({'error': repr(exc)})}\n\n"
             return
-        # Learn from the finished exchange; best-effort, never surfaces to the client.
-        exchange = f"Candidate: {last_user_message}\nAda: {''.join(reply_parts)}"
+        # Persist the exchange and learn from it; best-effort, never surfaces to the client.
+        reply = "".join(reply_parts)
+        try:
+            history = ChatMessageRepository(session)
+            await history.append(user.id, "user", last_user_message)
+            if reply:
+                await history.append(user.id, "assistant", reply)
+            await history.prune(user.id)
+        except Exception:  # noqa: BLE001 — history must not break the stream
+            pass
+        exchange = f"Candidate: {last_user_message}\nAda: {reply}"
         await memory.remember(memories_repo, user.id, exchange)
 
     return StreamingResponse(
@@ -63,3 +77,23 @@ async def chat(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class HistoryMessage(BaseModel):
+    role: str
+    content: str
+
+
+@router.get("/history", response_model=list[HistoryMessage])
+async def chat_history(
+    session: AsyncSession = Depends(get_session), user: User = Depends(current_user)
+) -> list[HistoryMessage]:
+    turns = await ChatMessageRepository(session).list_recent(user.id)
+    return [HistoryMessage(role=t.role, content=t.content) for t in turns]
+
+
+@router.delete("/history", status_code=204)
+async def clear_chat_history(
+    session: AsyncSession = Depends(get_session), user: User = Depends(current_user)
+) -> None:
+    await ChatMessageRepository(session).clear(user.id)

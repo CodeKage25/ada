@@ -194,6 +194,13 @@ export const api = {
       body: JSON.stringify({ answers }),
     }),
 
+  // chat history — the rolling Ask Ada conversation
+  chatHistory: () => request<ChatMessage[]>("/api/chat/history"),
+  clearChatHistory: () =>
+    fetch("/api/chat/history", { method: "DELETE", credentials: "same-origin" }).then((r) => {
+      if (!r.ok) throw new ApiError(r.status, r.statusText);
+    }),
+
   // memories — what Ada remembers about the user from chats
   listMemories: () => request<Memory[]>("/api/memories"),
   deleteMemory: (id: number) =>
