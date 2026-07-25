@@ -213,9 +213,54 @@ class JobRepository:
         ).scalars()
         return count, list(rows.all())
 
+    # Rows per INSERT, sized to stay under asyncpg's 32767 bind-parameter limit.
+    _UPSERT_BATCH = 500
+
+    async def upsert_many(self, listings: list[dict[str, Any]]) -> int:
+        """Insert-or-refresh listings keyed on (source, external_id).
+
+        A re-run updates mutable fields in place instead of duplicating. An incoming
+        row without an embedding never clobbers one that already has a vector, so a
+        creds-less fetch can't erase a previous backfill.
+        """
+        for start in range(0, len(listings), self._UPSERT_BATCH):
+            batch = listings[start : start + self._UPSERT_BATCH]
+            stmt = insert(Job).values(batch)
+            stmt = stmt.on_conflict_do_update(
+                constraint="uq_jobs_source_external",
+                set_={
+                    "title": stmt.excluded.title,
+                    "company": stmt.excluded.company,
+                    "location": stmt.excluded.location,
+                    "remote": stmt.excluded.remote,
+                    "url": stmt.excluded.url,
+                    "description": stmt.excluded.description,
+                    "posted_at": stmt.excluded.posted_at,
+                    "embedding": func.coalesce(stmt.excluded.embedding, Job.embedding),
+                },
+            )
+            await self._s.execute(stmt)
+        await self._s.commit()
+        return len(listings)
+
+    async def unembedded(self, limit: int = 200) -> list[Job]:
+        """Listings awaiting an embedding backfill (ingested without model creds)."""
+        stmt = select(Job).where(Job.embedding.is_(None)).limit(limit)
+        return list((await self._s.execute(stmt)).scalars())
+
+    async def set_embeddings(self, pairs: list[tuple[int, list[float]]]) -> None:
+        for job_id, vector in pairs:
+            await self._s.execute(update(Job).where(Job.id == job_id).values(embedding=vector))
+        await self._s.commit()
+
     async def knn(self, embedding: list[float], k: int) -> list[tuple[Job, float]]:
-        """Nearest jobs by cosine distance. Returns (job, distance), closest first."""
+        """Nearest embedded jobs by cosine distance. Returns (job, distance), closest first."""
         distance = Job.embedding.cosine_distance(embedding).label("distance")
-        stmt = select(Job, distance).order_by(distance).limit(k)
+        stmt = (
+            select(Job, distance)
+            .where(Job.embedding.is_not(None))
+            .order_by(distance)
+            .limit(k)
+        )
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], float(row[1])) for row in rows]

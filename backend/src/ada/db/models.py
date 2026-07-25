@@ -73,14 +73,25 @@ class Run(Base):
 
 
 class Job(Base):
-    """Seeded reference data. Matched to a run via pgvector cosine KNN."""
+    """A live listing ingested from an ATS/aggregator (or the dev seed corpus).
+
+    Deduped on (source, external_id) so re-running ingestion refreshes rows instead
+    of duplicating them. `embedding` is nullable: ingestion always lands the listing,
+    and embedding happens when model creds are available (KNN skips unembedded rows).
+    """
     __tablename__ = "jobs"
+    __table_args__ = (UniqueConstraint("source", "external_id", name="uq_jobs_source_external"),)
     id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(32), default="seed")
+    external_id: Mapped[str] = mapped_column(String(256))
     title: Mapped[str] = mapped_column(String(256))
     company: Mapped[str] = mapped_column(String(256))
     location: Mapped[str] = mapped_column(String(256))
+    remote: Mapped[bool] = mapped_column(default=False)
+    url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     description: Mapped[str] = mapped_column(Text)
-    embedding: Mapped[list[float]] = mapped_column(Vector(EMBED_DIM))
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBED_DIM), nullable=True)
 
 
 class User(Base):

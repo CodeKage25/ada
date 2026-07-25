@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     llm_timeout_ms: int = 60_000
     llm_max_attempts: int = 3
 
+    # job ingestion (scheduled CLI; Jooble is the only keyed source)
+    jooble_api_key: str = Field(default="", repr=False)
+
     # matching + interview
     jobs_match_k: int = 5
     interview_questions: int = 5
