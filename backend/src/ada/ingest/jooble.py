@@ -16,8 +16,6 @@ def normalize(job: dict[str, Any], host: str) -> dict[str, Any]:
     from ada.ingest.normalize import bounded, looks_remote, parse_iso, strip_html
 
     location = job.get("location") or "Unspecified"
-    # Jooble ids are not always stable/present; fall back to a link-derived key.
-    # Host-prefixed because ids are only unique within one country feed.
     link_key = hashlib.sha256((job.get("link") or "").encode()).hexdigest()[:32]
     external_id = f"{host}:{job.get('id') or link_key}"
     return bounded({

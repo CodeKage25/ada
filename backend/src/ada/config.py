@@ -34,9 +34,7 @@ class Settings(BaseSettings):
     llm_timeout_ms: int = 60_000
     llm_max_attempts: int = 3
 
-    # job ingestion (scheduled CLI; Jooble is the only keyed source).
-    # Jooble keys are bound to one country feed, so this maps feed host -> key,
-    # e.g. JOOBLE_FEEDS={"jooble.org": "<us-key>", "ng.jooble.org": "<ng-key>"}.
+    # Jooble keys are country-feed-bound: maps feed host -> key.
     jooble_feeds: dict[str, str] = Field(default_factory=dict, repr=False)
 
     # matching + interview

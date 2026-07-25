@@ -75,18 +75,11 @@ class Run(Base):
 
 
 class Job(Base):
-    """A live listing ingested from an ATS/aggregator (or the dev seed corpus).
-
-    Deduped on (source, external_id) so re-running ingestion refreshes rows instead
-    of duplicating them. `embedding` is nullable: ingestion always lands the listing,
-    and embedding happens when model creds are available (KNN skips unembedded rows).
-    """
+    """Listing ingested from an ATS/aggregator, deduped on (source, external_id)."""
     __tablename__ = "jobs"
     __table_args__ = (UniqueConstraint("source", "external_id", name="uq_jobs_source_external"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     source: Mapped[str] = mapped_column(String(32), default="seed")
-    # Ingestion always sets this from the upstream ATS id; the generated default
-    # keeps directly-constructed rows (seed corpus, tests) unique under the constraint.
     external_id: Mapped[str] = mapped_column(String(256), default=lambda: uuid.uuid4().hex)
     title: Mapped[str] = mapped_column(String(256))
     company: Mapped[str] = mapped_column(String(256))
@@ -102,7 +95,6 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
-    # bcrypt hash; nullable so legacy (pre-password) rows remain valid until they set one.
     password_hash: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

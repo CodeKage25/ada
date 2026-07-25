@@ -1,28 +1,17 @@
-"""Source configuration for ingestion.
-
-Keys are each company's public board identifier on its ATS; values are display
-names. Every board is verified live before inclusion. Coverage spans industries
-(healthcare, hospitality, logistics, education, retail, finance, media, tech)
-and includes African employers. Jooble queries target the Nigeria/local market
-across professions, not only tech.
-"""
+"""Ingestion source configuration; every board verified live before inclusion."""
 
 GREENHOUSE_BOARDS: dict[str, str] = {
-    # African employers
     "moniepoint": "Moniepoint",
     "jumia": "Jumia",
-    # healthcare / education
     "oscar": "Oscar Health",
     "duolingo": "Duolingo",
     "guild": "Guild",
-    # hospitality / food / retail / logistics
     "airbnb": "Airbnb",
     "sweetgreen": "Sweetgreen",
     "peloton": "Peloton",
     "instacart": "Instacart",
     "doordashusa": "DoorDash",
     "lyft": "Lyft",
-    # finance / tech
     "stripe": "Stripe",
     "coinbase": "Coinbase",
     "gitlab": "GitLab",
@@ -50,9 +39,6 @@ ASHBY_BOARDS: dict[str, str] = {
     "supabase": "Supabase",
 }
 
-# (keywords, location) pairs per Jooble feed host. Keys are feed-bound (see
-# Settings.jooble_feeds): the US feed carries remote/global roles, the Nigeria
-# feed carries local roles across professions.
 JOOBLE_QUERIES: dict[str, list[tuple[str, str]]] = {
     "jooble.org": [
         ("remote software engineer", ""),

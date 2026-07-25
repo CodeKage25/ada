@@ -10,10 +10,8 @@ from datetime import UTC, datetime
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\n{3,}|\r")
 
-# Postgres Text has no length cap, but embedding inputs do — keep descriptions sane.
 MAX_DESCRIPTION = 20_000
 
-# Column bounds from db.models.Job; enforced here so no source can overflow an insert.
 _BOUNDS = {"external_id": 256, "title": 256, "company": 256, "location": 256, "url": 1024}
 
 
@@ -26,7 +24,6 @@ def bounded(listing: dict) -> dict:
 
 
 def strip_html(raw: str) -> str:
-    """HTML (possibly entity-escaped, as Greenhouse returns) -> readable plain text."""
     text = html.unescape(raw)
     text = _TAG.sub(" ", text)
     text = re.sub(r"[ \t]{2,}", " ", text)

@@ -177,7 +177,8 @@ class ProfileRepository:
         await self._s.execute(stmt)
         await self._s.commit()
         profile = await self._s.get(Profile, user_id)
-        assert profile is not None
+        if profile is None:
+            raise RuntimeError(f"profile missing immediately after upsert for {user_id}")
         return profile
 
 
@@ -213,18 +214,11 @@ class JobRepository:
         ).scalars()
         return count, list(rows.all())
 
-    # Rows per INSERT, sized to stay under asyncpg's 32767 bind-parameter limit.
     _UPSERT_BATCH = 500
 
     async def upsert_many(self, listings: list[dict[str, Any]]) -> int:
-        """Insert-or-refresh listings keyed on (source, external_id).
-
-        A re-run updates mutable fields in place instead of duplicating. An incoming
-        row without an embedding never clobbers one that already has a vector, so a
-        creds-less fetch can't erase a previous backfill. Overlapping fetch queries
-        can return the same listing twice; ON CONFLICT DO UPDATE cannot touch a row
-        twice in one INSERT, so the batch is de-duplicated first (last wins).
-        """
+        """Insert-or-refresh keyed on (source, external_id); a NULL incoming
+        embedding never overwrites a stored vector."""
         listings = list({(li["source"], li["external_id"]): li for li in listings}.values())
         for start in range(0, len(listings), self._UPSERT_BATCH):
             batch = listings[start : start + self._UPSERT_BATCH]
@@ -247,7 +241,6 @@ class JobRepository:
         return len(listings)
 
     async def unembedded(self, limit: int = 200) -> list[Job]:
-        """Listings awaiting an embedding backfill (ingested without model creds)."""
         stmt = select(Job).where(Job.embedding.is_(None)).limit(limit)
         return list((await self._s.execute(stmt)).scalars())
 

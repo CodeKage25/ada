@@ -1,11 +1,4 @@
-"""Ingestion pipeline: fetch -> normalize -> upsert -> embed backfill.
-
-Designed to run as a Cloud Run Job on a Cloud Scheduler trigger (see README);
-locally via `python -m ada.ingest [--limit N]`. Every stage is idempotent:
-upserts dedup on (source, external_id), and embedding is a separate backfill
-pass over rows with NULL embeddings — so a run without model creds still lands
-listings, and the next credentialed run vectorizes them.
-"""
+"""Ingestion pipeline: fetch -> normalize -> upsert -> embed backfill."""
 import asyncio
 from typing import Any
 
@@ -19,13 +12,10 @@ from ada.observability import log
 
 _EMBED_BATCH = 32
 _HTTP_TIMEOUT = 30.0
-# Jooble serves every query from one host; unbounded concurrency there causes
-# intermittent TLS resets, so its requests share a small semaphore.
 _JOOBLE_CONCURRENCY = 4
 
 
 async def _gather_listings(limit: int | None) -> list[dict[str, Any]]:
-    """Fetch every configured source; one source failing never sinks the run."""
     s = get_settings()
     listings: list[dict[str, Any]] = []
     async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True) as client:
@@ -65,7 +55,6 @@ async def _gather_listings(limit: int | None) -> list[dict[str, Any]]:
 
 
 async def _backfill_embeddings(repo: JobRepository) -> int:
-    """Embed rows ingested without vectors. Missing model creds logs and moves on."""
     from ada.services.search import SearchService
 
     pending = await repo.unembedded()
@@ -78,7 +67,7 @@ async def _backfill_embeddings(repo: JobRepository) -> int:
         texts = [f"{j.title} at {j.company}. {j.description}"[:8_000] for j in batch]
         try:
             vectors = await service.embed_many(texts)
-        except Exception as exc:  # creds/quota/network — listings still landed
+        except Exception as exc:
             log.warning("embed_backfill_skipped", error=str(exc), pending=len(pending) - embedded)
             break
         await repo.set_embeddings(
