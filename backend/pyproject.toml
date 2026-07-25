@@ -19,6 +19,10 @@ dependencies = [
     "email-validator>=2.1",
     "alembic>=1.13",
     "bcrypt>=4.1",
+    "google-cloud-storage>=2.16",
+    "pypdf>=4.2",
+    "python-docx>=1.1",
+    "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]

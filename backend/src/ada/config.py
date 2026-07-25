@@ -26,6 +26,8 @@ class Settings(BaseSettings):
 
     gcp_project: str = ""
     gcp_location: str = "us-central1"
+    # Uploaded CV originals land here (empty = extraction only, nothing stored).
+    gcs_bucket: str = ""
     vertex_model: str = "gemini-2.5-flash"
     embedding_model: str = "text-embedding-004"
     live_model: str = "gemini-live-2.5-flash-native-audio"
