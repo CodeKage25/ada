@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button, Card, PageHeader } from "@/components/ui";
 import { voiceWsUrl } from "@/lib/api";
-import { startMic, type MicSession } from "@/lib/audio";
+import { createVoicePlayer, startMic, type MicSession, type VoicePlayer } from "@/lib/audio";
 
 type CallState = "idle" | "connecting" | "live" | "extracting" | "error";
 
@@ -18,6 +18,7 @@ export default function VoicePage() {
   const [seconds, setSeconds] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const micRef = useRef<MicSession | null>(null);
+  const playerRef = useRef<VoicePlayer | null>(null);
 
   // Session clock, shown in the eyebrow while Ada listens.
   useEffect(() => {
@@ -30,6 +31,8 @@ export default function VoicePage() {
   const cleanup = () => {
     micRef.current?.stop();
     micRef.current = null;
+    playerRef.current?.close();
+    playerRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
   };
@@ -46,6 +49,7 @@ export default function VoicePage() {
 
       ws.onopen = async () => {
         try {
+          playerRef.current = createVoicePlayer();
           micRef.current = await startMic((frame) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: "audio", data: frame }));
@@ -67,7 +71,11 @@ export default function VoicePage() {
           cv_text?: string;
           message?: string;
         };
-        if (msg.type === "transcript" && msg.data) {
+        if (msg.type === "audio" && msg.data) {
+          playerRef.current?.play(msg.data);
+        } else if (msg.type === "interrupt") {
+          playerRef.current?.clear();
+        } else if (msg.type === "transcript" && msg.data) {
           setTranscript((prev) => prev + msg.data);
         } else if (msg.type === "intake") {
           localStorage.setItem(
@@ -108,7 +116,7 @@ export default function VoicePage() {
     <>
       <PageHeader
         title="Talk to Ada."
-        subtitle="A short spoken intake — Ada asks about your background and target role, then drafts your run for you."
+        subtitle="A real spoken conversation — Ada asks about your background out loud, you answer, and she drafts your run. Interrupt her any time."
       />
 
       {state === "idle" || state === "error" ? (
