@@ -321,6 +321,39 @@ class ApplicationRepository:
     async def get(self, application_id: str) -> Application | None:
         return await self._s.get(Application, application_id)
 
+    async def count_in_flight(self, user_id: str) -> int:
+        stmt = select(func.count(Application.id)).where(
+            Application.user_id == user_id,
+            Application.status == ApplicationStatus.PREPARING,
+        )
+        return (await self._s.execute(stmt)).scalar_one()
+
+    async def claim_for_retry(self, application_id: str) -> bool:
+        """Move a finished-unsuccessfully application back to PREPARING; True only if
+        this call won the transition, so a double retry dispatches once."""
+        stmt = (
+            update(Application)
+            .where(
+                Application.id == application_id,
+                Application.status.in_(
+                    [ApplicationStatus.NEEDS_ATTENTION, ApplicationStatus.FAILED]
+                ),
+            )
+            .values(status=ApplicationStatus.PREPARING, detail=None)
+            .returning(Application.id)
+        )
+        claimed = (await self._s.execute(stmt)).scalar_one_or_none() is not None
+        await self._s.commit()
+        return claimed
+
+    async def find_stuck(self, older_than_seconds: int) -> list[str]:
+        cutoff = datetime.now(UTC) - timedelta(seconds=older_than_seconds)
+        stmt = select(Application.id).where(
+            Application.status == ApplicationStatus.PREPARING,
+            Application.created_at < cutoff,
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
     async def set_status(
         self,
         application_id: str,

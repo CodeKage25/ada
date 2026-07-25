@@ -171,7 +171,7 @@ function RunDetail() {
                     </div>
                     <p className="mt-2.5 text-xs leading-relaxed text-muted">{m.reason}</p>
                     <div className="mt-3 flex justify-end">
-                      {typeof m.job_id === "number" && <ApplyButton jobId={m.job_id} />}
+                      {typeof m.job_id === "number" && <ApplyButton jobId={m.job_id} runId={id} />}
                     </div>
                   </div>
                 </div>

@@ -10,7 +10,12 @@ from typing import TYPE_CHECKING, Any
 from ada.config import get_settings
 from ada.resilience import retry_async
 from ada.services.ats import ApplicantAnswers, SubmitOutcome
-from ada.services.ats.executor import TOTAL_TIMEOUT_S, _any_visible, _collect_errors
+from ada.services.ats.executor import (
+    TOTAL_TIMEOUT_S,
+    _any_visible,
+    _collect_errors,
+    _texts_for,
+)
 from ada.vertex import vertex_client
 
 if TYPE_CHECKING:
@@ -221,11 +226,28 @@ async def _submit(page: "Page") -> bool:
 
 async def _confirmed(page: "Page") -> bool:
     if await _any_visible(
-        page, ("text=Thank you", "text=submitted", "text=Application received")
+        page, ("text=Thank you for applying", "text=Application submitted",
+               "text=Application received", '[role="status"]:has-text("submitted")')
     ):
         return True
+    # A stray "thank you" banner never removes the form — require the application
+    # form to be gone AND a confirmation phrase before calling it submitted.
+    if not await _form_gone(page):
+        return False
+    for region in ("h1", "h2", "main", '[role="status"]', ".confirmation"):
+        for text in await _texts_for(page, region):
+            if CONFIRMATION_PATTERN.search(text):
+                return True
+    return False
+
+
+async def _form_gone(page: "Page") -> bool:
+    selector = (
+        "input:visible:not([type=hidden]):not([type=submit]):not([type=button]), "
+        "textarea:visible"
+    )
     try:
-        body = await page.locator("body").inner_text(timeout=5_000)
+        remaining = await page.locator(selector).count()
     except Exception:
         return False
-    return bool(CONFIRMATION_PATTERN.search(body))
+    return remaining == 0

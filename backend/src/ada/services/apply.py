@@ -1,6 +1,9 @@
 """One-click apply: build applicant answers, render the CV, drive the ATS submit."""
+import asyncio
 import io
+import re
 
+from ada.config import get_settings
 from ada.db.models import ApplicationStatus, Job, Profile, RunStatus, User
 from ada.db.repositories import (
     ApplicationRepository,
@@ -17,11 +20,25 @@ from ada.services.ats import lever as ats_lever
 
 SUPPORTED_SOURCES = {"greenhouse", "lever", "ashby"}
 
+_browser_slots: asyncio.Semaphore | None = None
+
+
+def _browser_gate() -> asyncio.Semaphore:
+    global _browser_slots
+    if _browser_slots is None:
+        _browser_slots = asyncio.Semaphore(get_settings().apply_max_concurrency)
+    return _browser_slots
+
 
 class ApplyPrecondition(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def safe_filename(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-.")
+    return cleaned[:80] or "applicant"
 
 
 def cv_docx_bytes(cv_markdown: str) -> bytes:
@@ -62,7 +79,7 @@ def build_answers(user: User, profile: Profile | None, cv_markdown: str) -> Appl
         email=user.email,
         phone=(profile.phone or "").strip() or None,
         linkedin_url=profile.linkedin_url,
-        cv_filename=f"{full_name.replace(' ', '-')}-CV.docx",
+        cv_filename=f"{safe_filename(full_name)}-CV.docx",
         cv_bytes=cv_docx_bytes(cv_markdown),
     )
 
@@ -113,10 +130,11 @@ async def run_submission(application_id: str) -> None:
             )
             return
     try:
-        if plan is not None:
-            outcome = await execute_plan(plan, answers)
-        else:
-            outcome = await submit_generic(job_url, answers)
+        async with _browser_gate():
+            if plan is not None:
+                outcome = await execute_plan(plan, answers)
+            else:
+                outcome = await submit_generic(job_url, answers)
     except Exception as exc:  # noqa: BLE001 — any submit failure must land in status, not logs alone
         log.error("apply_submit_crashed", application_id=application_id, error=str(exc))
         outcome = None
@@ -138,3 +156,19 @@ async def run_submission(application_id: str) -> None:
 
 def is_supported(job: Job) -> bool:
     return bool(job.url)
+
+
+async def recover_stuck_applications() -> int:
+    """Applications left PREPARING past the window had their in-process submit lost
+    (instance terminated). Flip them to NEEDS_ATTENTION so the user can retry."""
+    threshold = get_settings().apply_stuck_seconds
+    async with _session_factory() as session:
+        applications = ApplicationRepository(session)
+        stuck = await applications.find_stuck(threshold)
+        for application_id in stuck:
+            await applications.set_status(
+                application_id,
+                ApplicationStatus.NEEDS_ATTENTION,
+                detail="This application was interrupted before finishing — tap Apply to retry.",
+            )
+    return len(stuck)

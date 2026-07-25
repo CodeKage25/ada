@@ -15,7 +15,7 @@ type Phase =
 const POLL_MS = 3000;
 const POLL_LIMIT = 60;
 
-export function ApplyButton({ jobId }: { jobId: number }) {
+export function ApplyButton({ jobId, runId }: { jobId: number; runId?: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -27,7 +27,7 @@ export function ApplyButton({ jobId }: { jobId: number }) {
     setBusy(true);
     setError("");
     try {
-      const res = await api.applyToJob(jobId);
+      const res = await api.applyToJob(jobId, runId);
       if (res.already_applied && res.status !== "preparing") {
         const app = (await api.listApplications()).find((a) => a.id === res.application_id);
         setPhase({ kind: "done", status: res.status, detail: app?.detail ?? null });
@@ -44,7 +44,7 @@ export function ApplyButton({ jobId }: { jobId: number }) {
     } finally {
       setBusy(false);
     }
-  }, [jobId]);
+  }, [jobId, runId]);
 
   const saveIdentity = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,15 +92,29 @@ export function ApplyButton({ jobId }: { jobId: number }) {
       );
     }
     return (
-      <span
-        title={phase.detail ?? undefined}
-        className="inline-flex max-w-56 items-center gap-1.5 rounded-full bg-warn-soft px-3 py-1.5 text-xs font-medium text-warn"
-      >
-        <AlertCircle className="size-3.5 shrink-0" />
-        <span className="truncate">
-          {phase.status === "failed" ? "Failed — nothing sent" : "Needs your attention"}
+      <div className="flex flex-col items-end gap-1.5">
+        <span
+          title={phase.detail ?? undefined}
+          className="inline-flex max-w-56 items-center gap-1.5 rounded-full bg-warn-soft px-3 py-1.5 text-xs font-medium text-warn"
+        >
+          <AlertCircle className="size-3.5 shrink-0" />
+          <span className="truncate">
+            {phase.status === "failed" ? "Failed — nothing sent" : "Needs your attention"}
+          </span>
         </span>
-      </span>
+        {phase.detail && (
+          <p className="max-w-56 text-right text-[11px] leading-snug text-muted">{phase.detail}</p>
+        )}
+        <button
+          onClick={() => {
+            setPhase({ kind: "idle" });
+            void start();
+          }}
+          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 

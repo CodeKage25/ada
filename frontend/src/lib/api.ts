@@ -198,10 +198,10 @@ export const api = {
   },
 
   // applications
-  applyToJob: (jobId: number) =>
+  applyToJob: (jobId: number, runId?: string) =>
     request<{ application_id: string; status: ApplicationStatus; already_applied: boolean }>(
       `/api/jobs/${jobId}/apply`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({ run_id: runId ?? null }) },
     ),
   listApplications: () => request<ApplicationSummary[]>("/api/applications"),
   putIdentity: (full_name: string, phone: string | null) =>

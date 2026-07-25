@@ -6,7 +6,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ada.auth.dependencies import current_user
-from ada.db.models import User
+from ada.config import get_settings
+from ada.db.models import ApplicationStatus, RunStatus, User
 from ada.db.repositories import (
     ApplicationRepository,
     JobRepository,
@@ -37,25 +38,51 @@ class ApplicationOut(BaseModel):
     created_at: str
 
 
+class ApplyIn(BaseModel):
+    run_id: str | None = None
+
+
 class ApplyOut(BaseModel):
     application_id: str
     status: str
     already_applied: bool
 
 
+async def _cv_for_apply(
+    runs: RunRepository, user_id: str, run_id: str | None
+) -> tuple[str, str] | None:
+    if run_id is not None:
+        run = await runs.get(run_id)
+        if (
+            run is not None
+            and run.user_id == user_id
+            and run.status == RunStatus.COMPLETE
+            and run.rewritten_cv
+        ):
+            return run.rewritten_cv, run.id
+    return await latest_cv_markdown(runs, user_id)
+
+
 @router.post("/jobs/{job_id}/apply", response_model=ApplyOut, status_code=202)
 async def apply_to_job(
     job_id: int,
     background: BackgroundTasks,
+    body: ApplyIn | None = None,
     session: AsyncSession = Depends(get_session),
     user: User = Depends(current_user),
 ) -> ApplyOut:
+    applications = ApplicationRepository(session)
     job = await JobRepository(session).get(job_id)
     if job is None:
         raise HTTPException(404, "Job not found.")
     if not is_supported(job):
         raise HTTPException(422, "This listing has no application page on file.")
-    cv = await latest_cv_markdown(RunRepository(session), user.id)
+    in_flight = await applications.count_in_flight(user.id)
+    if in_flight >= get_settings().apply_max_in_flight_per_user:
+        raise HTTPException(
+            429, "A few applications are still in progress — let those finish first."
+        )
+    cv = await _cv_for_apply(RunRepository(session), user.id, body.run_id if body else None)
     if cv is None:
         raise HTTPException(409, "Complete a run first — Ada applies with your rewritten CV.")
     profile = await ProfileRepository(session).get(user.id)
@@ -63,15 +90,22 @@ async def apply_to_job(
         build_answers(user, profile, cv[0])
     except ApplyPrecondition as exc:
         raise HTTPException(428, str(exc)) from exc
-    application, created = await ApplicationRepository(session).create_or_get(
+
+    application, created = await applications.create_or_get(
         application_id=uuid.uuid4().hex, user_id=user.id, job_id=job_id, run_id=cv[1]
     )
-    if created:
+    dispatch = created
+    if not created and application.status in (
+        ApplicationStatus.NEEDS_ATTENTION,
+        ApplicationStatus.FAILED,
+    ):
+        dispatch = await applications.claim_for_retry(application.id)
+    if dispatch:
         background.add_task(run_submission, application.id)
     return ApplyOut(
         application_id=application.id,
-        status=str(application.status),
-        already_applied=not created,
+        status="preparing" if dispatch else str(application.status),
+        already_applied=not dispatch,
     )
 
 

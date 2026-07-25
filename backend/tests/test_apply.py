@@ -11,6 +11,7 @@ from ada.services.apply import (
     build_plan,
     cv_docx_bytes,
     is_supported,
+    safe_filename,
 )
 from ada.services.ats import ApplicantAnswers, split_name
 from ada.services.ats.generic import CV_FILE_MARKER, mapping_prompt, parse_mapping
@@ -94,6 +95,22 @@ def test_is_supported_any_source_with_url():
     assert not is_supported(_Obj(source="seed", url=None))
 
 
+def test_safe_filename_strips_path_and_unsafe_chars():
+    assert safe_filename("Jane Doe") == "Jane-Doe"
+    assert "/" not in safe_filename("a/b/../c")
+    assert safe_filename("../../etc/passwd") == "etc-passwd"
+    assert safe_filename("!!!") == "applicant"
+    assert len(safe_filename("x" * 200)) <= 80
+
+
+def test_build_answers_filename_is_path_safe():
+    user = _Obj(email="e@example.com")
+    profile = _Obj(full_name="Jane/../Doe", phone=None, linkedin_url=None)
+    answers = build_answers(user, profile, CV_MD)
+    assert "/" not in answers.cv_filename
+    assert answers.cv_filename.endswith("-CV.docx")
+
+
 def test_mapping_prompt_contains_only_facts_and_rules():
     prompt = mapping_prompt([{"index": 0, "label": "Email"}], _answers())
     assert "jane@example.com" in prompt
@@ -157,4 +174,63 @@ async def test_application_lifecycle_idempotent_and_tracked():
             await s.execute(delete(Application).where(Application.user_id == user.id))
             await s.execute(delete(Job).where(Job.id == job.id))
             await s.execute(delete(User).where(User.id == user.id))
+            await s.commit()
+
+
+@_db
+async def test_retry_in_flight_and_recovery():
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import delete, update
+
+    from ada.db.models import Application, ApplicationStatus, Job, User
+    from ada.db.repositories import ApplicationRepository, JobRepository
+    from ada.db.session import _session_factory, init_db
+    from ada.services.apply import recover_stuck_applications
+
+    await init_db()
+    user_id = uuid.uuid4().hex
+    app_id = uuid.uuid4().hex
+    async with _session_factory() as s:
+        user = User(id=user_id, email=f"{uuid.uuid4().hex}@example.com")
+        s.add(user)
+        await s.commit()
+        job = Job(
+            source="greenhouse", external_id=f"apply-{uuid.uuid4().hex}",
+            title="QA", company="Acme", location="Lagos", description="t",
+            url="https://boards.greenhouse.io/acme/jobs/1",
+        )
+        await JobRepository(s).add_many([job])
+        job_id = job.id
+    try:
+        async with _session_factory() as s:
+            repo = ApplicationRepository(s)
+            await repo.create_or_get(
+                application_id=app_id, user_id=user_id, job_id=job_id, run_id=None
+            )
+            assert await repo.count_in_flight(user_id) == 1  # PREPARING
+            await repo.set_status(app_id, ApplicationStatus.NEEDS_ATTENTION, detail="captcha")
+            assert await repo.count_in_flight(user_id) == 0
+            assert await repo.claim_for_retry(app_id) is True
+            assert await repo.claim_for_retry(app_id) is False  # already PREPARING
+            reloaded = await repo.get(app_id)
+            assert reloaded is not None and str(reloaded.status) == "preparing"
+            assert reloaded.detail is None
+            await s.execute(
+                update(Application)
+                .where(Application.id == app_id)
+                .values(created_at=datetime.now(UTC) - timedelta(seconds=9999))
+            )
+            await s.commit()
+
+        assert await recover_stuck_applications() >= 1
+
+        async with _session_factory() as s:
+            swept = await ApplicationRepository(s).get(app_id)
+            assert swept is not None and str(swept.status) == "needs_attention"
+    finally:
+        async with _session_factory() as s:
+            await s.execute(delete(Application).where(Application.user_id == user_id))
+            await s.execute(delete(Job).where(Job.id == job_id))
+            await s.execute(delete(User).where(User.id == user_id))
             await s.commit()
