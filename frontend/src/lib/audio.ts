@@ -62,58 +62,6 @@ export async function startMic(
   };
 }
 
-/** Streaming playback for Ada's voice: 24 kHz mono PCM16 chunks, gapless. */
-export interface PcmPlayer {
-  enqueue(base64Pcm16: string): void;
-  /** Barge-in: drop everything queued and go quiet immediately. */
-  flush(): void;
-  stop(): void;
-}
-
-export function createPcmPlayer(sampleRate = 24000): PcmPlayer {
-  const ctx = new AudioContext({ sampleRate });
-  let nextTime = 0;
-  let live: AudioBufferSourceNode[] = [];
-
-  return {
-    enqueue(base64Pcm16: string) {
-      const binary = atob(base64Pcm16);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const pcm = new Int16Array(bytes.buffer, 0, Math.floor(bytes.length / 2));
-      if (pcm.length === 0) return;
-      const buffer = ctx.createBuffer(1, pcm.length, sampleRate);
-      const channel = buffer.getChannelData(0);
-      for (let i = 0; i < pcm.length; i++) channel[i] = pcm[i] / 32768;
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      source.connect(ctx.destination);
-      live.push(source);
-      source.onended = () => {
-        live = live.filter((s) => s !== source);
-      };
-      const at = Math.max(ctx.currentTime, nextTime);
-      source.start(at);
-      nextTime = at + buffer.duration;
-    },
-    flush() {
-      for (const source of live) {
-        try {
-          source.stop();
-        } catch {
-          /* already ended */
-        }
-      }
-      live = [];
-      nextTime = 0;
-    },
-    stop() {
-      this.flush();
-      void ctx.close();
-    },
-  };
-}
-
 function toBase64(pcm: Int16Array): string {
   const bytes = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength);
   let binary = "";
@@ -122,4 +70,62 @@ function toBase64(pcm: Int16Array): string {
     binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
   }
   return btoa(binary);
+}
+
+const OUTPUT_RATE = 24000;
+
+export interface VoicePlayer {
+  play(base64Pcm16: string): void;
+  clear(): void;
+  close(): void;
+}
+
+/** Plays Gemini's PCM16@24kHz reply stream, scheduling frames back-to-back so
+ *  they play gaplessly. clear() cuts playback for barge-in when the user speaks. */
+export function createVoicePlayer(): VoicePlayer {
+  const ctx = new AudioContext();
+  const active = new Set<AudioBufferSourceNode>();
+  let playhead = 0;
+
+  return {
+    play(base64Pcm16: string) {
+      void ctx.resume();
+      const pcm = fromBase64(base64Pcm16);
+      if (pcm.length === 0) return;
+      const buffer = ctx.createBuffer(1, pcm.length, OUTPUT_RATE);
+      const channel = buffer.getChannelData(0);
+      for (let i = 0; i < pcm.length; i++) channel[i] = pcm[i] / 32768;
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      const startAt = Math.max(ctx.currentTime, playhead);
+      source.start(startAt);
+      playhead = startAt + buffer.duration;
+      active.add(source);
+      source.onended = () => active.delete(source);
+    },
+    clear() {
+      for (const source of active) {
+        try {
+          source.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+      active.clear();
+      playhead = 0;
+    },
+    close() {
+      this.clear();
+      void ctx.close();
+    },
+  };
+}
+
+function fromBase64(base64: string): Int16Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const usable = bytes.length - (bytes.length % 2);
+  return new Int16Array(bytes.buffer, 0, usable / 2);
 }
