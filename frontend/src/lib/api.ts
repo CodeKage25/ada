@@ -71,6 +71,18 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface UploadedDoc {
+  id: number;
+  filename: string;
+  size_bytes: number;
+  archived: boolean;
+  created_at: string;
+}
+
+export interface UploadedDocDetail extends UploadedDoc {
+  cv_text: string;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -159,6 +171,8 @@ export const api = {
     }),
 
   // documents
+  listDocuments: () => request<UploadedDoc[]>("/api/documents"),
+  getDocument: (id: number) => request<UploadedDocDetail>(`/api/documents/${id}`),
   uploadCv: async (file: File) => {
     const body = new FormData();
     body.append("file", file);
@@ -176,7 +190,12 @@ export const api = {
       }
       throw new ApiError(res.status, detail);
     }
-    return res.json() as Promise<{ cv_text: string; gcs_uri: string | null; filename: string }>;
+    return res.json() as Promise<{
+      id: number;
+      cv_text: string;
+      gcs_uri: string | null;
+      filename: string;
+    }>;
   },
 
   // profile

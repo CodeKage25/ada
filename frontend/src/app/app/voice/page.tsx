@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button, Card, PageHeader } from "@/components/ui";
 import { voiceWsUrl } from "@/lib/api";
-import { startMic, type MicSession } from "@/lib/audio";
+import { createPcmPlayer, startMic, type MicSession, type PcmPlayer } from "@/lib/audio";
 
 type CallState = "idle" | "connecting" | "live" | "extracting" | "error";
 
@@ -18,6 +18,7 @@ export default function VoicePage() {
   const [seconds, setSeconds] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const micRef = useRef<MicSession | null>(null);
+  const playerRef = useRef<PcmPlayer | null>(null);
 
   // Session clock, shown in the eyebrow while Ada listens.
   useEffect(() => {
@@ -30,6 +31,8 @@ export default function VoicePage() {
   const cleanup = () => {
     micRef.current?.stop();
     micRef.current = null;
+    playerRef.current?.stop();
+    playerRef.current = null;
     wsRef.current?.close();
     wsRef.current = null;
   };
@@ -46,6 +49,8 @@ export default function VoicePage() {
 
       ws.onopen = async () => {
         try {
+          // Created on the user gesture path so autoplay policy allows it.
+          playerRef.current = createPcmPlayer();
           micRef.current = await startMic((frame) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: "audio", data: frame }));
@@ -69,6 +74,10 @@ export default function VoicePage() {
         };
         if (msg.type === "transcript" && msg.data) {
           setTranscript((prev) => prev + msg.data);
+        } else if (msg.type === "audio" && msg.data) {
+          playerRef.current?.enqueue(msg.data);
+        } else if (msg.type === "interrupted") {
+          playerRef.current?.flush();
         } else if (msg.type === "intake") {
           localStorage.setItem(
             "ada.intake-draft",
@@ -96,6 +105,7 @@ export default function VoicePage() {
   const end = () => {
     micRef.current?.stop();
     micRef.current = null;
+    playerRef.current?.flush();
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       setState("extracting");
       wsRef.current.send(JSON.stringify({ type: "end" }));

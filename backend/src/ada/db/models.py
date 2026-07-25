@@ -129,3 +129,16 @@ class Profile(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class UploadedDocument(Base):
+    """CV the user uploaded: extracted text for runs/preview, original archived in GCS."""
+    __tablename__ = "uploaded_documents"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    filename: Mapped[str] = mapped_column(String(256))
+    content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    size_bytes: Mapped[int] = mapped_column()
+    gcs_uri: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    cv_text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

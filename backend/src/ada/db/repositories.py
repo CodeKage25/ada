@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ada.db.models import Job, ProcessedEvent, Profile, Run, RunStatus
+from ada.db.models import Job, ProcessedEvent, Profile, Run, RunStatus, UploadedDocument
 
 # Filler words that carry no signal when matching a role name against job titles.
 _ROLE_STOPWORDS = {"a", "an", "and", "the", "of", "for", "in", "at", "to", "or"}
@@ -260,3 +260,45 @@ class JobRepository:
         )
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], float(row[1])) for row in rows]
+
+
+class UploadedDocumentRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def add(
+        self,
+        *,
+        user_id: str,
+        filename: str,
+        content_type: str | None,
+        size_bytes: int,
+        gcs_uri: str | None,
+        cv_text: str,
+    ) -> UploadedDocument:
+        doc = UploadedDocument(
+            user_id=user_id,
+            filename=filename,
+            content_type=content_type,
+            size_bytes=size_bytes,
+            gcs_uri=gcs_uri,
+            cv_text=cv_text,
+        )
+        self._s.add(doc)
+        await self._s.commit()
+        await self._s.refresh(doc)
+        return doc
+
+    async def list_for_user(self, user_id: str) -> list[UploadedDocument]:
+        stmt = (
+            select(UploadedDocument)
+            .where(UploadedDocument.user_id == user_id)
+            .order_by(UploadedDocument.created_at.desc())
+        )
+        return list((await self._s.execute(stmt)).scalars())
+
+    async def get_for_user(self, doc_id: int, user_id: str) -> UploadedDocument | None:
+        stmt = select(UploadedDocument).where(
+            UploadedDocument.id == doc_id, UploadedDocument.user_id == user_id
+        )
+        return (await self._s.execute(stmt)).scalar_one_or_none()

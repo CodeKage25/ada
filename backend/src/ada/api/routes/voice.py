@@ -50,6 +50,17 @@ async def voice(ws: WebSocket) -> None:
                     sc = resp.server_content
                     if sc is None:
                         continue
+                    # Ada's voice: 24 kHz PCM16 chunks the client plays as they arrive.
+                    if sc.model_turn and sc.model_turn.parts:
+                        for part in sc.model_turn.parts:
+                            if part.inline_data and part.inline_data.data:
+                                await ws.send_json({
+                                    "type": "audio",
+                                    "data": base64.b64encode(part.inline_data.data).decode(),
+                                })
+                    # Barge-in: the user spoke over Ada — tell the client to cut playback.
+                    if sc.interrupted:
+                        await ws.send_json({"type": "interrupted"})
                     if sc.input_transcription and sc.input_transcription.text:
                         await relay("You", sc.input_transcription.text)
                     if sc.output_transcription and sc.output_transcription.text:
