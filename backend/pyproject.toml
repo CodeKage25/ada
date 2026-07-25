@@ -54,6 +54,10 @@ select = ["E", "F", "I", "UP", "B"]
 # B008: `Depends(...)` in defaults is the canonical FastAPI dependency pattern.
 ignore = ["B008"]
 
+[[tool.mypy.overrides]]
+module = "google.cloud.*"
+ignore_missing_imports = true
+
 [tool.mutmut]
 source_paths = [
     "src/ada/ingest/normalize.py",
