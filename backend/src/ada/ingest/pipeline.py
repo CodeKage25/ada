@@ -11,6 +11,10 @@ from ada.ingest import ashby, boards, greenhouse, jooble, lever
 from ada.observability import log
 
 _EMBED_BATCH = 32
+# text-embedding-004 rejects requests over 20k tokens total; pack batches to a
+# conservative estimate (~3 chars/token) so no single request can exceed it.
+_EMBED_TOKEN_BUDGET = 15_000
+_EMBED_MAX_FAILURES = 3
 _HTTP_TIMEOUT = 30.0
 _JOOBLE_CONCURRENCY = 4
 
@@ -62,18 +66,36 @@ async def _backfill_embeddings(repo: JobRepository) -> int:
         return 0
     service = SearchService()
     embedded = 0
-    for start in range(0, len(pending), _EMBED_BATCH):
-        batch = pending[start : start + _EMBED_BATCH]
-        texts = [f"{j.title} at {j.company}. {j.description}"[:8_000] for j in batch]
+    failures = 0
+    batch: list[tuple[Any, str]] = []
+    budget = 0
+
+    async def _flush() -> None:
+        nonlocal embedded, failures, batch, budget
+        if not batch:
+            return
         try:
-            vectors = await service.embed_many(texts)
+            vectors = await service.embed_many([text for _, text in batch])
+            await repo.set_embeddings(
+                [(job.id, vector) for (job, _), vector in zip(batch, vectors, strict=True)]
+            )
+            embedded += len(batch)
         except Exception as exc:
-            log.warning("embed_backfill_skipped", error=str(exc), pending=len(pending) - embedded)
-            break
-        await repo.set_embeddings(
-            [(job.id, vector) for job, vector in zip(batch, vectors, strict=True)]
-        )
-        embedded += len(batch)
+            failures += 1
+            log.warning("embed_batch_failed", error=str(exc), batch=len(batch))
+        batch, budget = [], 0
+
+    for job in pending:
+        text = f"{job.title} at {job.company}. {job.description}"[:8_000]
+        tokens = len(text) // 3
+        if batch and (budget + tokens > _EMBED_TOKEN_BUDGET or len(batch) >= _EMBED_BATCH):
+            await _flush()
+            if failures >= _EMBED_MAX_FAILURES:
+                log.warning("embed_backfill_aborted", pending=len(pending) - embedded)
+                return embedded
+        batch.append((job, text))
+        budget += tokens
+    await _flush()
     return embedded
 
 
