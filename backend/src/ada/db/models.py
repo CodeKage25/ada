@@ -2,10 +2,12 @@
 
 Run: one per paid session; holds inputs and the generated deliverables (rewritten CV,
 job matches, interview questions, and scored answers). ProcessedEvent: idempotency
-ledger for webhook events. Job: seeded reference data with a pgvector embedding.
-User/AuthToken/Session: email+password authentication — passwords are bcrypt-hashed,
-reset tokens are stored hashed and single-use, and sessions are opaque tokens hashed at rest.
+ledger for webhook events. Job: a listing ingested from an ATS/aggregator, embedded
+for pgvector matching. User/AuthToken/Session: email+password authentication —
+passwords are bcrypt-hashed, reset tokens are stored hashed and single-use, and
+sessions are opaque tokens hashed at rest.
 """
+import uuid
 from datetime import datetime
 from enum import StrEnum
 from typing import Any
@@ -83,7 +85,9 @@ class Job(Base):
     __table_args__ = (UniqueConstraint("source", "external_id", name="uq_jobs_source_external"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     source: Mapped[str] = mapped_column(String(32), default="seed")
-    external_id: Mapped[str] = mapped_column(String(256))
+    # Ingestion always sets this from the upstream ATS id; the generated default
+    # keeps directly-constructed rows (seed corpus, tests) unique under the constraint.
+    external_id: Mapped[str] = mapped_column(String(256), default=lambda: uuid.uuid4().hex)
     title: Mapped[str] = mapped_column(String(256))
     company: Mapped[str] = mapped_column(String(256))
     location: Mapped[str] = mapped_column(String(256))

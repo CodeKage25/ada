@@ -50,16 +50,29 @@ ASHBY_BOARDS: dict[str, str] = {
     "supabase": "Supabase",
 }
 
-# (keywords, location) pairs sent to Jooble.
-JOOBLE_QUERIES: list[tuple[str, str]] = [
-    ("software engineer", "Lagos"),
-    ("product manager", "Lagos"),
-    ("data analyst", "Nigeria"),
-    ("accountant", "Lagos"),
-    ("nurse", "Nigeria"),
-    ("sales representative", "Lagos"),
-    ("customer service", "Lagos"),
-    ("teacher", "Nigeria"),
-    ("logistics coordinator", "Lagos"),
-    ("administrative assistant", "Abuja"),
-]
+# (keywords, location) pairs per Jooble feed host. Keys are feed-bound (see
+# Settings.jooble_feeds): the US feed carries remote/global roles, the Nigeria
+# feed carries local roles across professions.
+JOOBLE_QUERIES: dict[str, list[tuple[str, str]]] = {
+    "jooble.org": [
+        ("remote software engineer", ""),
+        ("remote customer support", ""),
+        ("remote accountant", ""),
+        ("remote data analyst", ""),
+        ("remote virtual assistant", ""),
+    ],
+    "ng.jooble.org": [
+        ("software engineer", "Lagos"),
+        ("product manager", "Lagos"),
+        ("data analyst", "Nigeria"),
+        ("accountant", "Lagos"),
+        ("nurse", "Nigeria"),
+        ("sales representative", "Lagos"),
+        ("customer service", "Lagos"),
+        ("teacher", "Nigeria"),
+        ("logistics", "Lagos"),
+        ("administrative assistant", "Abuja"),
+        ("engineer", "Port Harcourt"),
+        ("banking", "Lagos"),
+    ],
+}

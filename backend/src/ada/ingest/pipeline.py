@@ -19,6 +19,9 @@ from ada.observability import log
 
 _EMBED_BATCH = 32
 _HTTP_TIMEOUT = 30.0
+# Jooble serves every query from one host; unbounded concurrency there causes
+# intermittent TLS resets, so its requests share a small semaphore.
+_JOOBLE_CONCURRENCY = 4
 
 
 async def _gather_listings(limit: int | None) -> list[dict[str, Any]]:
@@ -33,12 +36,19 @@ async def _gather_listings(limit: int | None) -> list[dict[str, Any]]:
             tasks.append((f"lever/{slug}", lever.fetch(client, slug, company)))
         for slug, company in boards.ASHBY_BOARDS.items():
             tasks.append((f"ashby/{slug}", ashby.fetch(client, slug, company)))
-        if s.jooble_api_key:
-            for keywords, location in boards.JOOBLE_QUERIES:
-                coro = jooble.fetch(client, s.jooble_api_key, keywords, location)
-                tasks.append((f"jooble/{location}", coro))
+        if s.jooble_feeds:
+            semaphore = asyncio.Semaphore(_JOOBLE_CONCURRENCY)
+
+            async def _throttled(host: str, key: str, keywords: str, location: str) -> list:
+                async with semaphore:
+                    return await jooble.fetch(client, host, key, keywords, location)
+
+            for host, key in s.jooble_feeds.items():
+                for keywords, location in boards.JOOBLE_QUERIES.get(host, []):
+                    coro = _throttled(host, key, keywords, location)
+                    tasks.append((f"jooble:{host}/{keywords}", coro))
         else:
-            log.info("jooble_skipped", reason="JOOBLE_API_KEY not set")
+            log.info("jooble_skipped", reason="JOOBLE_FEEDS not set")
 
         results = await asyncio.gather(*(t[1] for t in tasks), return_exceptions=True)
         for (name, _), result in zip(tasks, results, strict=True):

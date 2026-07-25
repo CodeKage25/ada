@@ -221,8 +221,11 @@ class JobRepository:
 
         A re-run updates mutable fields in place instead of duplicating. An incoming
         row without an embedding never clobbers one that already has a vector, so a
-        creds-less fetch can't erase a previous backfill.
+        creds-less fetch can't erase a previous backfill. Overlapping fetch queries
+        can return the same listing twice; ON CONFLICT DO UPDATE cannot touch a row
+        twice in one INSERT, so the batch is de-duplicated first (last wins).
         """
+        listings = list({(li["source"], li["external_id"]): li for li in listings}.values())
         for start in range(0, len(listings), self._UPSERT_BATCH):
             batch = listings[start : start + self._UPSERT_BATCH]
             stmt = insert(Job).values(batch)

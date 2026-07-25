@@ -9,16 +9,17 @@ from typing import Any
 import httpx
 
 SOURCE = "jooble"
-_URL = "https://jooble.org/api/{key}"
+_URL = "https://{host}/api/{key}"
 
 
-def normalize(job: dict[str, Any]) -> dict[str, Any]:
+def normalize(job: dict[str, Any], host: str) -> dict[str, Any]:
     from ada.ingest.normalize import bounded, looks_remote, parse_iso, strip_html
 
     location = job.get("location") or "Unspecified"
     # Jooble ids are not always stable/present; fall back to a link-derived key.
+    # Host-prefixed because ids are only unique within one country feed.
     link_key = hashlib.sha256((job.get("link") or "").encode()).hexdigest()[:32]
-    external_id = str(job.get("id") or link_key)
+    external_id = f"{host}:{job.get('id') or link_key}"
     return bounded({
         "source": SOURCE,
         "external_id": external_id,
@@ -33,10 +34,11 @@ def normalize(job: dict[str, Any]) -> dict[str, Any]:
 
 
 async def fetch(
-    client: httpx.AsyncClient, api_key: str, keywords: str, location: str
+    client: httpx.AsyncClient, host: str, api_key: str, keywords: str, location: str
 ) -> list[dict[str, Any]]:
     resp = await client.post(
-        _URL.format(key=api_key), json={"keywords": keywords, "location": location}
+        _URL.format(host=host, key=api_key),
+        json={"keywords": keywords, "location": location},
     )
     resp.raise_for_status()
-    return [normalize(j) for j in resp.json().get("jobs", [])]
+    return [normalize(j, host) for j in resp.json().get("jobs", [])]
