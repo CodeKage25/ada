@@ -69,7 +69,11 @@ def test_extract_rejects_scanned_pdf():
         _extract("cv.pdf", _pdf_bytes(CV_TEXT))
 
 
-async def test_process_cv_upload_returns_text_without_bucket():
+async def test_process_cv_upload_returns_text_without_bucket(monkeypatch):
+    # Isolate from local .env: force "no bucket configured" regardless of dev setup.
+    from ada.services import documents
+
+    monkeypatch.setattr(documents, "_store", lambda *a: None)
     text, gcs_uri = await process_cv_upload("user-1", "cv.txt", CV_TEXT.encode(), "text/plain")
     assert text == CV_TEXT
     assert gcs_uri is None
