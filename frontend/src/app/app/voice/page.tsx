@@ -13,7 +13,6 @@ type CallState = "idle" | "connecting" | "live" | "extracting" | "error";
 export default function VoicePage() {
   const router = useRouter();
   const [state, setState] = useState<CallState>("idle");
-  const [transcript, setTranscript] = useState("");
   const [error, setError] = useState("");
   const [seconds, setSeconds] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
@@ -41,7 +40,6 @@ export default function VoicePage() {
   const start = async () => {
     setState("connecting");
     setError("");
-    setTranscript("");
     setSeconds(0);
     try {
       const ws = new WebSocket(voiceWsUrl());
@@ -75,8 +73,6 @@ export default function VoicePage() {
           playerRef.current?.play(msg.data);
         } else if (msg.type === "interrupt") {
           playerRef.current?.clear();
-        } else if (msg.type === "transcript" && msg.data) {
-          setTranscript((prev) => prev + msg.data);
         } else if (msg.type === "intake") {
           localStorage.setItem(
             "ada.intake-draft",
@@ -193,12 +189,6 @@ export default function VoicePage() {
               {state === "live" && "Just talk — Ada replies out loud. Interrupt any time."}
               {state === "extracting" && "Wrapping up — drafting your run..."}
             </p>
-            {transcript && (
-              <div className="quiet-scroll mt-5 max-h-44 w-full overflow-y-auto rounded-xl border border-[#2b2925] bg-[#1a1916] p-4 text-left text-sm leading-relaxed">
-                {transcript}
-                <span className="caret-blink text-[#8b85f4]">▎</span>
-              </div>
-            )}
             <div className="mt-8 flex w-full gap-2.5">
               <button
                 onClick={() => {
