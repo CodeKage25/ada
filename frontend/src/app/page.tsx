@@ -12,6 +12,7 @@ import {
   ScrubText,
   Timeline,
 } from "@/components/marketing/demo";
+import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
 import { AdaVoiceIntro } from "@/components/marketing/voice-intro";
 import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
@@ -69,14 +70,6 @@ const FAQS = [
     a: "Yes. Voice intake is built in: Ada interviews you briefly, drafts your CV and target role from the conversation, and you review before paying.",
   },
 ];
-
-const RECEIPT_ITEMS = [
-  ["CV rewritten for your role", "included"],
-  ["Best-fit roles, ranked with reasons", "included"],
-  ["Mock interview, scored 0–10", "included"],
-  ["Coaching chat, grounded in your runs", "unlimited"],
-  ["Failed runs", "never charged"],
-] as const;
 
 function Nav() {
   return (
@@ -231,67 +224,12 @@ export default function Landing() {
 
         {/* Pricing */}
         <section id="pricing" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-28">
-          <div className="grid items-start gap-12 lg:grid-cols-2">
-            <Reveal>
-              <Eyebrow>Pricing</Eyebrow>
-              <h2 className="display fluid-h2 mb-4">Pay per run. Own the result.</h2>
-              <p className="max-w-md text-muted">
-                No subscription, no retainer, no career-coach hourly rate. One price, one
-                complete run — itemised on the right, yours forever in your account.
-              </p>
-              <p className="mt-6 max-w-md text-sm leading-relaxed text-muted">
-                A senior career coach charges more for one hour than Ada charges for the
-                whole run — and Ada shows up in minutes, already knowing your background.
-              </p>
-            </Reveal>
-            <Reveal delay={0.1}>
-              {/* The run receipt — pay-per-run, itemised like the real thing */}
-              <Card className="overflow-hidden !p-0 shadow-lift">
-                <div className="flex items-center justify-between border-b border-dashed border-line px-7 py-4">
-                  <span className="display text-lg">
-                    Ada<span className="text-accent">.</span>
-                  </span>
-                  <p className="eyebrow !text-[10px]">Run receipt</p>
-                </div>
-                <ul className="px-7 py-5">
-                  {RECEIPT_ITEMS.map(([item, value]) => (
-                    <li key={item} className="flex items-baseline gap-2 py-1.5 text-sm">
-                      <span className="text-ink">{item}</span>
-                      <span
-                        className="mx-1 flex-1 border-b border-dotted border-line"
-                        aria-hidden
-                      />
-                      <span
-                        className={
-                          value === "included" ? "text-muted" : "font-medium text-accent"
-                        }
-                      >
-                        {value}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="border-t border-dashed border-line px-7 py-6">
-                  <div className="flex items-baseline justify-between">
-                    <p className="text-sm text-muted">Total, one run</p>
-                    <p className="display text-5xl">
-                      ₦2,000
-                      <span className="ml-2 text-base text-muted">/ $15</span>
-                    </p>
-                  </div>
-                  <Link href="/app/new" className="mt-5 block">
-                    <Button className="group w-full !py-3.5">
-                      Run Ada now
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
-                  </Link>
-                  <p className="mt-3 text-center text-xs text-muted">
-                    Paystack for Nigeria · Stripe worldwide · Results in under 3 minutes
-                  </p>
-                </div>
-              </Card>
-            </Reveal>
-          </div>
+          <Reveal>
+            <Eyebrow>Pricing</Eyebrow>
+          </Reveal>
+          <Reveal delay={0.05}>
+            <PricingTiers />
+          </Reveal>
         </section>
 
         {/* FAQs */}
