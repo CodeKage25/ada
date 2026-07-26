@@ -10,6 +10,30 @@ export interface CreateRunOut {
   amount: number | null;
   currency: string | null;
   checkout_url: string | null;
+  entitled: boolean;
+}
+
+export interface PlanPrice {
+  ngn_kobo: number;
+  usd_cents: number;
+}
+
+export interface Plan {
+  tier: "pro" | "premium";
+  name: string;
+  tagline: string;
+  features: string[];
+  monthly: PlanPrice;
+  annual: PlanPrice;
+}
+
+export interface SubscriptionState {
+  tier: "free" | "pro" | "premium";
+  status: string;
+  cadence: "monthly" | "annual";
+  current_period_end: string | null;
+  can_apply: boolean;
+  can_voice: boolean;
 }
 
 export interface Match {
@@ -248,6 +272,17 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ full_name, phone }),
     }),
+
+  // subscriptions
+  getPlans: () => request<Plan[]>("/api/plans"),
+  getSubscription: () => request<SubscriptionState>("/api/subscription"),
+  startSubscription: (tier: string, cadence: string, provider: "paystack" | "stripe") =>
+    request<{ checkout_url: string }>("/api/subscriptions", {
+      method: "POST",
+      body: JSON.stringify({ tier, cadence, provider }),
+    }),
+  cancelSubscription: () =>
+    request<{ status: string }>("/api/subscriptions/cancel", { method: "POST" }),
 
   // profile
   getProfile: () => request<Profile | null>("/api/profile"),
