@@ -1,15 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Pause, Play, RotateCcw, Sparkles } from "lucide-react";
+import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
-const TRANSCRIPT =
-  "Hi — I'm Ada, your career companion. I rewrite your CV for the exact role you " +
-  "want, find the jobs that actually fit, and put you through a real mock interview " +
-  "before the real one. Whether it's your first job or your next big move, I'll help " +
-  "you put your best foot forward. Whenever you're ready — let's build your next " +
-  "opportunity, together.";
 
 // Stable, organic-looking bar heights (0–1). Fixed so the waveform never reflows.
 const BARS = [
@@ -29,7 +22,6 @@ export function AdaVoiceIntro() {
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(24);
-  const [showText, setShowText] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -169,44 +161,6 @@ export function AdaVoiceIntro() {
                 {fmt(current)} / {fmt(duration)}
               </span>
             </div>
-
-            <div className="mt-3 flex items-center gap-4 pl-14 text-xs">
-              <button
-                type="button"
-                onClick={() => setShowText((v) => !v)}
-                aria-expanded={showText}
-                className="font-medium text-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
-              >
-                {showText ? "Hide transcript" : "Transcript"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  seekTo(0);
-                  play();
-                }}
-                className="inline-flex items-center gap-1 font-medium text-muted transition-colors hover:text-ink"
-              >
-                <RotateCcw className="size-3" /> Replay
-              </button>
-              <span className="ml-auto inline-flex items-center gap-1 text-muted/70">
-                <Sparkles className="size-3" /> A word from Ada
-              </span>
-            </div>
-
-            <AnimatePresence initial={false}>
-              {showText && (
-                <motion.p
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="mt-3 overflow-hidden pl-14 text-sm leading-relaxed text-muted"
-                >
-                  {TRANSCRIPT}
-                </motion.p>
-              )}
-            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
