@@ -24,11 +24,13 @@ from ada.auth.tokens import hash_token
 from ada.config import get_settings
 from ada.db.repositories import (
     ProfileRepository,
+    SubscriptionRepository,
     UploadedDocumentRepository,
     UserMemoryRepository,
 )
 from ada.db.session import _session_factory
 from ada.observability import log
+from ada.services import entitlements
 from ada.services.memory import MemoryService
 from ada.services.voice import Mode, VoiceIntake, format_candidate_context
 
@@ -78,10 +80,28 @@ async def _remember(user_id: str, transcript: list[str]) -> None:
         log.warning("voice_remember_failed", user_id=user_id, error=str(exc))
 
 
+async def _can_voice(user_id: str | None) -> bool:
+    if user_id is None:
+        return False
+    try:
+        async with _session_factory() as session:
+            sub = await SubscriptionRepository(session).get(user_id)
+        return entitlements.resolve(sub).can_voice
+    except Exception:  # noqa: BLE001 — gate defaults to closed on any failure
+        return False
+
+
 @router.websocket("/voice")
 async def voice(ws: WebSocket) -> None:
     await ws.accept()
     user_id, context = await _resolve_caller(ws)
+    if not await _can_voice(user_id):
+        await ws.send_json({
+            "type": "error",
+            "message": "Live voice is a Premium feature — upgrade to talk with Ada.",
+        })
+        await ws.close()
+        return
     mode: Mode = "interview" if ws.query_params.get("mode") == "interview" else "conversation"
     intake = VoiceIntake()
     transcript: list[str] = []

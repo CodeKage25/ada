@@ -204,6 +204,12 @@ function NewRun() {
     setNotice("");
     try {
       const run = await api.createRun({ email, target_role: role.trim(), cv_text: cv.trim(), provider });
+      if (run.entitled) {
+        // Subscription covered it — no payment, already running.
+        localStorage.removeItem(SAVE_KEY);
+        setRunId(run.run_id);
+        return;
+      }
       if (run.provider === "stripe" && run.checkout_url) {
         window.location.href = run.checkout_url;
         return;

@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     stripe_price_usd_cents: int = 1500
     stripe_currency: str = "usd"
 
+    # subscription plan codes (created in the Paystack/Stripe dashboards), keyed
+    # "<tier>_<cadence>" e.g. PAYSTACK_PLANS='{"pro_monthly":"PLN_x","premium_annual":"PLN_y"}'
+    paystack_plans: dict[str, str] = Field(default_factory=dict)
+    stripe_prices: dict[str, str] = Field(default_factory=dict)
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origin.split(",") if o.strip()]

@@ -164,57 +164,62 @@ export function ScrollProgress() {
 
 /** Hero headline: words rise out of a blur one by one, then a hand-drawn
  *  underline sweeps beneath "hired". */
-export function HeroHeadline() {
-  const lines = [
-    ["Meet", "Ada."],
-    ["She", "gets", "you"],
-  ];
-  let i = 0;
-  const word = (w: string) => {
-    const delay = 0.15 + i++ * 0.08;
-    return (
-      <motion.span
-        key={`${w}-${i}`}
-        className="inline-block whitespace-pre"
-        initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.6, delay, ease: EASE }}
-      >
-        {w}{" "}
-      </motion.span>
-    );
-  };
+// Cinematic reveal easing — a long, settling decelerate (expo-out feel).
+const REVEAL = [0.16, 1, 0.3, 1] as const;
+
+/** A line of the headline that rises from behind a mask. The padding/negative-margin
+ *  pair gives descenders (g, y, p) room inside the clip without changing line spacing. */
+function MaskLine({
+  children,
+  delay,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay: number;
+  className?: string;
+}) {
+  const reduce = useReducedMotion();
   return (
-    <h1 className="display fluid-hero">
-      {lines[0].map(word)}
-      <br />
-      {/* Editorial indent on the second line — the headline steps, it doesn't stack */}
-      <span className="hidden lg:inline-block lg:w-[1.1em]" aria-hidden />
-      {lines[1].map(word)}
-      <motion.em
-        className="relative inline-block text-accent"
-        initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.6, delay: 0.15 + 5 * 0.08, ease: EASE }}
+    <span className={`block overflow-hidden pb-[0.14em] -mb-[0.14em] ${className}`}>
+      <motion.span
+        className="block"
+        initial={reduce ? false : { y: "118%", rotate: 2 }}
+        animate={{ y: 0, rotate: 0 }}
+        transition={{ duration: 0.95, delay, ease: REVEAL }}
       >
-        hired.
-        <svg
-          className="absolute -bottom-[0.12em] left-0 w-full"
-          viewBox="0 0 220 16"
-          fill="none"
-          aria-hidden
-        >
-          <motion.path
-            d="M5 11 C 55 3, 115 15, 215 7"
-            stroke="currentColor"
-            strokeWidth="5"
-            strokeLinecap="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.7, delay: 1, ease: "easeOut" }}
-          />
-        </svg>
-      </motion.em>
+        {children}
+      </motion.span>
+    </span>
+  );
+}
+
+export function HeroHeadline() {
+  return (
+    <h1 className="display fluid-hero leading-[1.01]">
+      <MaskLine delay={0.1}>Meet Ada.</MaskLine>
+      {/* Editorial indent on the second line — the headline steps, it doesn't stack */}
+      <MaskLine delay={0.24} className="lg:pl-[1.1em]">
+        She gets you{" "}
+        <em className="relative inline-block text-accent">
+          hired.
+          <svg
+            className="absolute -bottom-[0.1em] left-0 w-full"
+            viewBox="0 0 220 16"
+            fill="none"
+            aria-hidden
+          >
+            <motion.path
+              d="M5 11 C 55 3, 115 15, 215 7"
+              stroke="currentColor"
+              strokeWidth="5"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.8, delay: 1.15, ease: "easeOut" }}
+            />
+          </svg>
+        </em>
+      </MaskLine>
     </h1>
   );
 }
