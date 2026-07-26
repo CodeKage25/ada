@@ -1,6 +1,7 @@
 "use client";
 
-import { Brain, Check, LogOut, X } from "lucide-react";
+import { Brain, Check, KeyRound, LogOut, Sparkles, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -14,7 +15,9 @@ import {
   Skeleton,
   Textarea,
 } from "@/components/ui";
-import { api, type Memory } from "@/lib/api";
+import { api, type Memory, type SubscriptionState } from "@/lib/api";
+
+const TIER_LABEL = { free: "Free", pro: "Pro", premium: "Premium" } as const;
 
 /** What Ada has learned from chats — visible, and deletable one fact at a time. */
 function Memories() {
@@ -87,6 +90,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [sub, setSub] = useState<SubscriptionState | null>(null);
+  const [resetState, setResetState] = useState<"idle" | "sending" | "sent">("idle");
 
   useEffect(() => {
     api
@@ -100,7 +105,22 @@ export default function ProfilePage() {
         }
       })
       .finally(() => setLoaded(true));
+    api
+      .getSubscription()
+      .then(setSub)
+      .catch(() => setSub(null));
   }, []);
+
+  const sendReset = async () => {
+    setResetState("sending");
+    try {
+      await api.requestReset(email);
+      setResetState("sent");
+    } catch {
+      setResetState("idle");
+      setError("Couldn't send the reset email — try again.");
+    }
+  };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,12 +172,46 @@ export default function ProfilePage() {
     );
   }
 
+  const displayName = fullName.trim() || email.split("@")[0];
+  const tier = sub?.tier ?? "free";
+
   return (
     <>
       <PageHeader
         title="Profile."
         subtitle="The more Ada knows about your background, the sharper her advice, rewrites, and matches get."
       />
+
+      {/* Who you are, at a glance — identity, plan, and the door to billing */}
+      <Card className="mb-6 overflow-hidden !p-0">
+        <div className="flex flex-wrap items-center justify-between gap-5 bg-gradient-to-r from-accent-soft/70 to-transparent px-6 py-6">
+          <div className="flex items-center gap-4">
+            <span className="display flex size-14 shrink-0 items-center justify-center rounded-full bg-ink text-xl uppercase text-bg">
+              {displayName[0]}
+            </span>
+            <div className="min-w-0">
+              <p className="display truncate text-2xl">{displayName}</p>
+              <p className="truncate text-sm text-muted">{email}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium">
+              {tier !== "free" && <Sparkles className="size-3.5 text-gold" />}
+              {TIER_LABEL[tier]}
+              {tier !== "free" && sub?.current_period_end && (
+                <span className="text-muted">
+                  · renews {new Date(sub.current_period_end).toLocaleDateString()}
+                </span>
+              )}
+            </span>
+            <Link href="/app/billing">
+              <Button variant="secondary" className="!py-2 text-[13px]">
+                {tier === "free" ? "Go unlimited" : "Manage plan"}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
 
       <Card className="mb-6 p-6">
         <form onSubmit={saveIdentity} className="space-y-5">
@@ -246,19 +300,46 @@ export default function ProfilePage() {
 
       <Memories />
 
-      <Card className="flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-sm font-semibold uppercase text-accent">
-            {email[0]}
-          </span>
+      {/* Account & security */}
+      <Card className="divide-y divide-line !p-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft">
+              <KeyRound className="size-4 text-accent" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">Password</p>
+              <p className="text-xs text-muted">
+                {resetState === "sent"
+                  ? `Reset link sent to ${email} — follow it to set a new password.`
+                  : "We'll email you a link to set a new one."}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={sendReset}
+            loading={resetState === "sending"}
+            disabled={resetState === "sent"}
+          >
+            {resetState === "sent" ? (
+              <>
+                <Check className="size-4" /> Sent
+              </>
+            ) : (
+              "Change password"
+            )}
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
           <div>
             <p className="text-sm font-medium">{email}</p>
             <p className="text-xs text-muted">Signed in with email and password</p>
           </div>
+          <Button variant="secondary" onClick={logout}>
+            <LogOut className="size-4" /> Sign out
+          </Button>
         </div>
-        <Button variant="secondary" onClick={logout}>
-          <LogOut className="size-4" /> Sign out
-        </Button>
       </Card>
     </>
   );

@@ -1,17 +1,22 @@
 @import "tailwindcss";
 
-/* Design tokens. Warm paper + near-black ink, one indigo accent.
-   Dark mode mirrors the same relationships at lower luminance. */
+/* Design tokens — the "Greenlight" system. Porcelain paper + green-black ink,
+   one viridian accent (green = the go signal, the offer, the hired moment),
+   and aged gold reserved for success. Dark mode mirrors the relationships at
+   lower luminance; .noir applies the dark set to a subtree (the marketing
+   site is noir-fixed regardless of the app theme). */
 :root {
-  --bg: #faf9f6;
+  --bg: #f6f7f3;
   --surface: #ffffff;
-  --surface-2: #f4f2ec;
-  --ink: #17150f;
-  --muted: #6f6a5e;
-  --line: #e7e4dc;
-  --accent: #4338ca;
+  --surface-2: #edf0e8;
+  --ink: #101812;
+  --muted: #5e6b60;
+  --line: #dee4d8;
+  --accent: #0e7a4a;
   --accent-ink: #ffffff;
-  --accent-soft: #eceafd;
+  --accent-soft: #e2f2e7;
+  --gold: #93701d;
+  --gold-soft: #f4ecd6;
   --success: #1a7f4b;
   --success-soft: #e3f4ea;
   --warn: #92600a;
@@ -19,22 +24,25 @@
   --danger: #b42318;
   --danger-soft: #fbe9e7;
   --radius: 16px;
-  --shadow-card: 0 1px 2px rgba(23, 21, 15, 0.04), 0 4px 16px rgba(23, 21, 15, 0.04);
-  --shadow-lift: 0 2px 4px rgba(23, 21, 15, 0.05), 0 16px 40px rgba(23, 21, 15, 0.1);
-  --shadow-btn: 0 1px 2px rgba(23, 21, 15, 0.16), 0 4px 12px rgba(67, 56, 202, 0.24);
-  --glow: rgba(67, 56, 202, 0.14);
+  --shadow-card: 0 1px 2px rgba(16, 24, 18, 0.04), 0 4px 16px rgba(16, 24, 18, 0.04);
+  --shadow-lift: 0 2px 4px rgba(16, 24, 18, 0.05), 0 16px 40px rgba(16, 24, 18, 0.1);
+  --shadow-btn: 0 1px 2px rgba(16, 24, 18, 0.16), 0 4px 12px rgba(14, 122, 74, 0.24);
+  --glow: rgba(14, 122, 74, 0.1);
 }
 
-.dark {
-  --bg: #12110e;
-  --surface: #1a1916;
-  --surface-2: #201f1b;
-  --ink: #f2f0ea;
-  --muted: #a09a8c;
-  --line: #2b2925;
-  --accent: #8b85f4;
-  --accent-ink: #12110e;
-  --accent-soft: #232145;
+.dark,
+.noir {
+  --bg: #0b120e;
+  --surface: #111a14;
+  --surface-2: #16211a;
+  --ink: #ecf2ea;
+  --muted: #94a496;
+  --line: #223027;
+  --accent: #3ecf8e;
+  --accent-ink: #06130b;
+  --accent-soft: #123322;
+  --gold: #e3b34c;
+  --gold-soft: #2c2412;
   --success: #4ade80;
   --success-soft: #14291c;
   --warn: #fbbf24;
@@ -43,8 +51,11 @@
   --danger-soft: #2e1715;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.45);
-  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(139, 133, 244, 0.25);
-  --glow: rgba(139, 133, 244, 0.13);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(62, 207, 142, 0.22);
+  --glow: rgba(62, 207, 142, 0.1);
+}
+.noir {
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -63,8 +74,11 @@
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
-  --font-serif: var(--font-instrument-serif), Georgia, serif;
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-schibsted), system-ui, sans-serif;
+  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
   --radius-card: var(--radius);
   --shadow-card: var(--shadow-card);
   --shadow-lift: var(--shadow-lift);
@@ -117,12 +131,13 @@ summary,
   cursor: pointer;
 }
 
-/* Editorial display headlines */
+/* Editorial display headlines — Fraunces, slightly softened */
 .display {
   font-family: var(--font-serif);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   line-height: 1.04;
-  font-weight: 400;
+  font-weight: 420;
+  font-variation-settings: "SOFT" 55;
 }
 
 /* Fluid type: scales continuously with viewport, no breakpoint jumps */
@@ -134,11 +149,12 @@ summary,
 .fluid-h2 { font-size: clamp(2rem, 3.2vw + 0.8rem, 3.1rem); }
 .fluid-band { font-size: clamp(1.6rem, 3vw + 0.7rem, 2.7rem); }
 
-/* Small-caps section eyebrow */
+/* Section eyebrow: mono, tracked wide — the system's technical voice */
 .eyebrow {
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-weight: 500;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--muted);
 }

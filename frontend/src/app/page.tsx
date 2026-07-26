@@ -12,7 +12,7 @@ import {
 import { HeroOrb } from "@/components/marketing/orb";
 import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
-import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
+import { Button, Card, Eyebrow, Logo } from "@/components/ui";
 
 const STEPS = [
   {
@@ -87,7 +87,6 @@ function Nav() {
           </a>
         </nav>
         <div className="flex items-center gap-1.5">
-          <ThemeToggle />
           <Link href="/login" className="px-2 text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
             Sign in
           </Link>
@@ -102,7 +101,9 @@ function Nav() {
 
 export default function Landing() {
   return (
-    <>
+    // The marketing site is noir-fixed: the dark Greenlight set, whatever the
+    // app theme. The app keeps its own light/dark toggle.
+    <div className="noir bg-bg text-ink">
       <ScrollProgress />
       <Nav />
       <main>
@@ -172,7 +173,7 @@ export default function Landing() {
                 Job searching is a full-time job you didn’t apply for. Rewriting
                 your CV for every role. Guessing what recruiters search for.
                 Walking into interviews cold. Ada does all of it — in{" "}
-                <em className="text-[#8b85f4]">one run.</em>
+                <em>one run.</em>
               </p>
             </Reveal>
           </div>
@@ -313,6 +314,6 @@ export default function Landing() {
           </p>
         </div>
       </footer>
-    </>
+    </div>
   );
 }

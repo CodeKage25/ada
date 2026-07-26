@@ -4,17 +4,25 @@ import { ArrowRight, Pause, Play } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-/** The hero's signature: Ada as a living voice orb. A canvas blob that idles
- *  with a slow breath, swells toward the cursor, and — once clicked — speaks
- *  (the recorded introduction), its surface rippling with the real audio
- *  amplitude via an AnalyserNode. Reduced motion gets a static disc that
- *  still plays the audio. */
+/** The hero's signature: Ada as a voice made visible. A dark glass orb with
+ *  gold and emerald light drifting inside it — idling slowly, leaning toward
+ *  the cursor, and burning brighter in rhythm with her actual voice (an
+ *  AnalyserNode on the recorded introduction). No chrome on the orb itself;
+ *  the controls live in a quiet row beneath it. Reduced motion gets a still
+ *  frame that still plays audio. */
 
 // Irrational-ish speed ratios so the wobble never visibly loops.
 const HARMONICS = [
-  { lobes: 3, speed: 0.61, phase: 0.0, amp: 0.016 },
-  { lobes: 5, speed: -0.94, phase: 1.7, amp: 0.011 },
-  { lobes: 8, speed: 1.42, phase: 4.1, amp: 0.006 },
+  { lobes: 3, speed: 0.61, phase: 0.0, amp: 0.014 },
+  { lobes: 5, speed: -0.94, phase: 1.7, amp: 0.01 },
+  { lobes: 8, speed: 1.42, phase: 4.1, amp: 0.005 },
+];
+
+// The light inside: one gold ember, two greens. Positions orbit slowly.
+const LOBES = [
+  { color: "236, 190, 88", r: 0.7, ox: -0.26, oy: -0.28, speed: 0.21, alpha: 0.85 },
+  { color: "62, 207, 142", r: 0.85, ox: 0.32, oy: 0.16, speed: -0.16, alpha: 0.62 },
+  { color: "56, 189, 178", r: 0.6, ox: -0.02, oy: 0.36, speed: 0.11, alpha: 0.5 },
 ];
 
 function fmt(seconds: number): string {
@@ -71,7 +79,7 @@ export function HeroOrb() {
 
     let raf = 0;
     let running = false;
-    let t = Math.PI * 2 * 0.37; // arbitrary fixed start so SSR/replays match
+    let t = Math.PI * 2 * 0.37; // fixed start so replays match
 
     const setSize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -81,6 +89,26 @@ export function HeroOrb() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
     setSize();
+
+    const blobPath = (cx: number, cy: number, R: number, energy: number) => {
+      ctx.beginPath();
+      const N = 160;
+      for (let i = 0; i <= N; i++) {
+        const th = (i / N) * Math.PI * 2;
+        let wob = 0;
+        if (!reduce) {
+          for (const hm of HARMONICS) {
+            wob += hm.amp * energy * Math.sin(hm.lobes * th + t * hm.speed + hm.phase);
+          }
+        }
+        const r = R * (1 + wob);
+        const x = cx + Math.cos(th) * r;
+        const y = cy + Math.sin(th) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+    };
 
     const draw = () => {
       const rect = canvas.getBoundingClientRect();
@@ -108,66 +136,55 @@ export function HeroOrb() {
       const level = levelRef.current;
       const hover = hoverRef.current;
 
-      const breath = reduce ? 0 : 0.014 * Math.sin(t * 0.5);
-      const R = Math.min(w, h) * 0.335 * (1 + breath + level * 0.07);
-      const energy = 1 + hover * 0.9 + level * 4.5;
+      const breath = reduce ? 0 : 0.012 * Math.sin(t * 0.5);
+      const R = Math.min(w, h) * 0.335 * (1 + breath + level * 0.06);
+      const energy = 1 + hover * 0.9 + level * 4;
+      const brightness = 0.9 + hover * 0.2 + level * 0.8;
 
-      // Halo first — a soft field behind the body, faded out fully inside the
-      // canvas so its edge never prints as a square against the page.
-      const haloR = Math.min(R * 1.75, Math.min(w, h) * 0.495);
-      const halo = ctx.createRadialGradient(cx, cy, R * 0.5, cx, cy, haloR);
-      halo.addColorStop(0, "rgba(99, 91, 227, 0.28)");
-      halo.addColorStop(1, "rgba(99, 91, 227, 0)");
+      // Ambient glow around the body — light escaping into the dark.
+      const haloR = Math.min(R * 1.7, Math.min(w, h) * 0.495);
+      const halo = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, haloR);
+      halo.addColorStop(0, `rgba(62, 207, 142, ${0.2 + level * 0.14})`);
+      halo.addColorStop(0.6, `rgba(227, 179, 76, ${0.07 + level * 0.06})`);
+      halo.addColorStop(1, "rgba(227, 179, 76, 0)");
       ctx.fillStyle = halo;
       ctx.beginPath();
       ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
       ctx.fill();
 
-      // The body: a polygon whose radius wobbles with three sine harmonics.
-      ctx.beginPath();
-      const N = 160;
-      for (let i = 0; i <= N; i++) {
-        const th = (i / N) * Math.PI * 2;
-        let wob = 0;
-        if (!reduce) {
-          for (const hm of HARMONICS) {
-            wob += hm.amp * energy * Math.sin(hm.lobes * th + t * hm.speed + hm.phase);
-          }
-        }
-        const r = R * (1 + wob);
-        const x = cx + Math.cos(th) * r;
-        const y = cy + Math.sin(th) * r;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      const body = ctx.createRadialGradient(
-        cx - R * 0.35,
-        cy - R * 0.4,
-        R * 0.1,
-        cx,
-        cy,
-        R * 1.12,
-      );
-      body.addColorStop(0, "#a9a3f7");
-      body.addColorStop(0.42, "#6d64e8");
-      body.addColorStop(1, "#3a2fb4");
-      ctx.fillStyle = body;
+      // The body: near-black glass.
+      blobPath(cx, cy, R, energy);
+      const base = ctx.createRadialGradient(cx, cy - R * 0.2, R * 0.2, cx, cy, R * 1.05);
+      base.addColorStop(0, "#153426");
+      base.addColorStop(1, "#0a150d");
+      ctx.fillStyle = base;
       ctx.fill();
 
-      // A quiet inner highlight — gives the surface a lit, glassy face.
-      const sheen = ctx.createRadialGradient(
-        cx - R * 0.4,
-        cy - R * 0.48,
-        0,
-        cx - R * 0.3,
-        cy - R * 0.35,
-        R * 0.75,
-      );
-      sheen.addColorStop(0, "rgba(255,255,255,0.34)");
-      sheen.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = sheen;
-      ctx.fill();
+      // Light drifting inside: additive lobes clipped to the body.
+      ctx.save();
+      blobPath(cx, cy, R, energy);
+      ctx.clip();
+      ctx.globalCompositeOperation = "lighter";
+      for (const lobe of LOBES) {
+        const ang = t * lobe.speed;
+        const lx = cx + (lobe.ox * Math.cos(ang) - lobe.oy * Math.sin(ang)) * R;
+        const ly = cy + (lobe.ox * Math.sin(ang) + lobe.oy * Math.cos(ang)) * R;
+        const lr = lobe.r * R * (1 + level * 0.25);
+        const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+        g.addColorStop(0, `rgba(${lobe.color}, ${lobe.alpha * brightness})`);
+        g.addColorStop(1, `rgba(${lobe.color}, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // A hairline rim so the glass has an edge against the dark.
+      blobPath(cx, cy, R, energy);
+      ctx.strokeStyle = `rgba(236, 242, 234, ${0.16 + level * 0.12})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
       t += 0.016;
       if (running && !reduce) raf = requestAnimationFrame(draw);
@@ -205,8 +222,7 @@ export function HeroOrb() {
     const audio = audioRef.current;
     if (!audio || audioCtxRef.current) return;
     try {
-      const Ctx = window.AudioContext;
-      const actx = new Ctx();
+      const actx = new window.AudioContext();
       const source = actx.createMediaElementSource(audio);
       const analyser = actx.createAnalyser();
       analyser.fftSize = 256;
@@ -243,41 +259,34 @@ export function HeroOrb() {
         onClick={toggle}
         onPointerEnter={() => (hoverTarget.current = 1)}
         onPointerLeave={() => (hoverTarget.current = 0)}
-        aria-label={playing ? "Pause Ada's introduction" : "Hear Ada introduce herself"}
-        className="group relative aspect-square w-72 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-4 focus-visible:ring-offset-bg sm:w-80 lg:w-[24rem]"
+        aria-label={playing ? "Pause Ada's introduction" : "Play Ada's introduction"}
+        className="relative aspect-square w-72 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:ring-offset-4 focus-visible:ring-offset-bg sm:w-80 lg:w-[24rem]"
       >
         <canvas ref={canvasRef} className="absolute inset-0 size-full" aria-hidden />
-        {/* Play affordance floats on the surface; fades once she's speaking */}
-        <span
-          className={`absolute left-1/2 top-1/2 flex size-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#3a2fb4] shadow-lift backdrop-blur transition-all duration-300 group-hover:scale-105 ${
-            playing ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-          }`}
-        >
-          {playing ? <Pause className="size-5" /> : <Play className="ml-0.5 size-5" />}
-        </span>
       </button>
 
-      <div className="mt-6 flex items-center gap-3 text-sm text-muted">
-        <span
-          className={`size-1.5 rounded-full ${playing ? "bg-accent pulse-soft" : "bg-line"}`}
-          aria-hidden
-        />
-        {playing ? (
-          <span aria-live="polite">
-            Ada is speaking · <span className="tabular-nums">{fmt(current)} / {fmt(duration)}</span>
+      {/* Controls: a quiet row, not an instruction */}
+      <div className="mt-7 flex items-center gap-5">
+        <button
+          type="button"
+          onClick={toggle}
+          className="inline-flex items-center gap-2.5 rounded-full border border-line bg-surface/60 py-2 pl-2.5 pr-4 text-sm backdrop-blur transition-colors hover:border-accent/50"
+        >
+          <span className="flex size-7 items-center justify-center rounded-full bg-accent text-accent-ink">
+            {playing ? <Pause className="size-3" /> : <Play className="ml-px size-3" />}
           </span>
-        ) : (
-          <span>Press the orb — Ada introduces herself in {fmt(duration)}</span>
-        )}
+          <span className="font-mono text-xs tabular-nums text-muted" aria-live="polite">
+            {playing ? `${fmt(current)} / ${fmt(duration)}` : `Listen · ${fmt(duration)}`}
+          </span>
+        </button>
+        <Link
+          href="/app/voice"
+          className="group/link inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
+        >
+          Talk to her live
+          <ArrowRight className="size-4 transition-transform group-hover/link:translate-x-0.5" />
+        </Link>
       </div>
-
-      <Link
-        href="/app/voice"
-        className="group/link mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-ink underline-offset-4 hover:underline"
-      >
-        Talk to her live
-        <ArrowRight className="size-4 transition-transform group-hover/link:translate-x-0.5" />
-      </Link>
     </div>
   );
 }
