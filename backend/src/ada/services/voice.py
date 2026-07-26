@@ -69,11 +69,13 @@ def format_candidate_context(
     return "\n\n".join(parts)[:_MAX_CONTEXT_CHARS]
 
 
+_ACCENT = "Speak in a warm, natural Nigerian English accent throughout."
+
+
 def _system_instruction(context: str | None, mode: Mode) -> str:
     persona = _INTERVIEW_PERSONA if mode == "interview" else _CONVERSATION_PERSONA
-    if context:
-        return f"{persona}\n\n{_GROUNDED_RULES.format(context=context)}"
-    return f"{persona}\n\n{_COLD_OPEN}"
+    tail = _GROUNDED_RULES.format(context=context) if context else _COLD_OPEN
+    return f"{_ACCENT}\n\n{persona}\n\n{tail}"
 
 
 class VoiceIntake:
@@ -81,12 +83,18 @@ class VoiceIntake:
         s = get_settings()
         self._client = vertex_client()
         self._live_model = s.live_model
+        self._voice = s.live_voice
 
     def connect(self, context: str | None = None, mode: Mode = "conversation"):
         """Async context manager yielding a Live session grounded in `context` when the
         caller is known. Emits native audio plus input/output transcription."""
         config = types.LiveConnectConfig(
             response_modalities=[types.Modality.AUDIO],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=self._voice)
+                )
+            ),
             system_instruction=_system_instruction(context, mode),
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),

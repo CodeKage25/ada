@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     vertex_model: str = "gemini-2.5-flash"
     embedding_model: str = "text-embedding-004"
     live_model: str = "gemini-live-2.5-flash-native-audio"
+    # Ada's single voice everywhere (live sessions + the landing intro asset).
+    live_voice: str = "Aoede"
 
     # LLM resilience
     llm_timeout_ms: int = 60_000
