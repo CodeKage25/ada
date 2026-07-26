@@ -13,6 +13,7 @@ import {
   Timeline,
 } from "@/components/marketing/demo";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
+import { AdaVoiceIntro } from "@/components/marketing/voice-intro";
 import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
 
 const STEPS = [
@@ -156,6 +157,11 @@ export default function Landing() {
                   >
                     or talk to Ada first
                   </Link>
+                </div>
+              </Reveal>
+              <Reveal delay={0.65}>
+                <div className="mt-6">
+                  <AdaVoiceIntro />
                 </div>
               </Reveal>
               <Reveal delay={0.7}>
