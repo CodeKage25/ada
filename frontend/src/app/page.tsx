@@ -42,7 +42,7 @@ const STEPS = [
 
 const FAQS = [
   {
-    q: "What exactly do I get for one payment?",
+    q: "What exactly do I get from a run?",
     a: "One complete run: your CV rewritten for a specific target role, a ranked list of best-fit roles with match scores, tailored interview questions, and scored feedback on your answers. Everything stays in your account.",
   },
   {
@@ -161,8 +161,9 @@ export default function Landing() {
                 {/* Sidenote, not a stat grid: the numbers live inside a sentence */}
                 <p className="mt-12 max-w-md border-l-2 border-accent/40 pl-5 text-sm leading-loose text-muted">
                   Under <em className="display text-xl text-ink">three minutes</em> from
-                  payment to results. <em className="display text-xl text-ink">One</em>{" "}
-                  payment, no subscription.{" "}
+                  start to results. Pay{" "}
+                  <em className="display text-xl text-ink">per run</em>, or go
+                  unlimited from ₦5,000 a month.{" "}
                   <em className="display text-xl text-ink">Zero</em> humans reading
                   your CV.
                 </p>
@@ -207,8 +208,8 @@ export default function Landing() {
                   From CV to prepared, in five steps.
                 </h2>
                 <p className="mt-4 max-w-sm text-muted">
-                  One payment starts the run. Everything after that is Ada working —
-                  the rail on the right is the whole process.
+                  Starting the run takes a minute. Everything after that is Ada
+                  working — the rail on the right is the whole process.
                 </p>
                 <Link href="/app/new" className="mt-8 inline-block">
                   <Button className="group">
@@ -285,7 +286,8 @@ export default function Landing() {
               </Link>
             </Magnetic>
             <p className="mt-6 text-xs text-bg/50">
-              ₦2,000 / $15 per run · No subscription · Results in minutes
+              ₦2,000 / $15 per run · Unlimited from ₦5,000 / $5 a month · Results in
+              minutes
             </p>
           </Reveal>
         </section>

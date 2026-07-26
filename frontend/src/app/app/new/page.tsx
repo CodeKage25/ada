@@ -519,8 +519,8 @@ function NewRun() {
           <h1 className="display text-3xl sm:text-4xl">Let Ada run.</h1>
           <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
             She&apos;ll match you properly against every role she&apos;s got, tailor your
-            CV for the best fits, and prep you for the interviews. One payment, no
-            subscription — and a failed run is never charged.
+            CV for the best fits, and prep you for the interviews. One payment covers
+            this run — Pro covers it automatically — and a failed run is never charged.
           </p>
           {notice && (
             <p className="mt-5 rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn">{notice}</p>
