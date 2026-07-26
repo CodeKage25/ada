@@ -266,7 +266,7 @@ export default function Landing() {
         {/* CTA band */}
         <section className="relative overflow-hidden bg-ink py-32 text-center text-bg">
           <div
-            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
+            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/15 blur-3xl"
             aria-hidden
           />
           <Reveal className="relative">

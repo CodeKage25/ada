@@ -22,7 +22,7 @@
   --shadow-card: 0 1px 2px rgba(23, 21, 15, 0.04), 0 4px 16px rgba(23, 21, 15, 0.04);
   --shadow-lift: 0 2px 4px rgba(23, 21, 15, 0.05), 0 16px 40px rgba(23, 21, 15, 0.1);
   --shadow-btn: 0 1px 2px rgba(23, 21, 15, 0.16), 0 4px 12px rgba(67, 56, 202, 0.24);
-  --glow: rgba(67, 56, 202, 0.14);
+  --glow: rgba(67, 56, 202, 0.09);
 }
 
 .dark {
@@ -44,7 +44,7 @@
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.45);
   --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(139, 133, 244, 0.25);
-  --glow: rgba(139, 133, 244, 0.13);
+  --glow: rgba(139, 133, 244, 0.10);
 }
 
 @theme inline {
@@ -146,8 +146,12 @@ summary,
 /* Soft radial glow behind heroes and CTA moments */
 .glow-field {
   background:
-    radial-gradient(42rem 26rem at 18% 0%, var(--glow), transparent 65%),
-    radial-gradient(36rem 24rem at 92% 22%, var(--glow), transparent 70%);
+    radial-gradient(60rem 34rem at 12% -8%, var(--glow), transparent 58%),
+    radial-gradient(
+      32rem 24rem at 96% 8%,
+      color-mix(in srgb, var(--glow) 55%, transparent),
+      transparent 62%
+    );
 }
 
 /* Faint dotted grid, fading out toward the bottom */
