@@ -4,17 +4,14 @@ import Link from "next/link";
 import {
   CareersBand,
   HeroHeadline,
-  HeroShowcase,
-  IntroVeil,
   Magnetic,
   Reveal,
   ScrollProgress,
-  ScrubText,
   Timeline,
 } from "@/components/marketing/demo";
+import { HeroOrb } from "@/components/marketing/orb";
 import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
-import { AdaVoiceIntro } from "@/components/marketing/voice-intro";
 import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
 
 const STEPS = [
@@ -106,7 +103,6 @@ function Nav() {
 export default function Landing() {
   return (
     <>
-      <IntroVeil />
       <ScrollProgress />
       <Nav />
       <main>
@@ -144,17 +140,6 @@ export default function Landing() {
                       </Button>
                     </Link>
                   </Magnetic>
-                  <Link
-                    href="/app/voice"
-                    className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-                  >
-                    or talk to Ada first
-                  </Link>
-                </div>
-              </Reveal>
-              <Reveal delay={0.65}>
-                <div className="mt-6">
-                  <AdaVoiceIntro />
                 </div>
               </Reveal>
               <Reveal delay={0.7}>
@@ -169,8 +154,8 @@ export default function Landing() {
                 </p>
               </Reveal>
             </div>
-            <Reveal delay={0.35} className="lg:mt-20">
-              <HeroShowcase />
+            <Reveal delay={0.35} className="lg:mt-14 lg:justify-self-center">
+              <HeroOrb />
             </Reveal>
           </div>
         </section>
@@ -178,19 +163,18 @@ export default function Landing() {
         {/* Every-career band */}
         <CareersBand />
 
-        {/* Problem band — words brighten as you scroll through the statement */}
+        {/* Problem band — one statement, set still. The words carry it. */}
         <section className="bg-ink py-32 text-bg">
           <div className="mx-auto max-w-4xl px-5">
             <p className="eyebrow mb-6 !text-bg/50">The problem</p>
-            <ScrubText
-              className="display fluid-band leading-snug"
-              segments={[
-                {
-                  text: "Job searching is a full-time job you didn’t apply for. Rewriting your CV for every role. Guessing what recruiters search for. Walking into interviews cold. Ada does all of it — in",
-                },
-                { text: "one run.", className: "text-accent italic" },
-              ]}
-            />
+            <Reveal>
+              <p className="display fluid-band leading-snug">
+                Job searching is a full-time job you didn’t apply for. Rewriting
+                your CV for every role. Guessing what recruiters search for.
+                Walking into interviews cold. Ada does all of it — in{" "}
+                <em className="text-[#8b85f4]">one run.</em>
+              </p>
+            </Reveal>
           </div>
         </section>
 
