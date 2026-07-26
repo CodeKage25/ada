@@ -295,11 +295,12 @@ export async function streamChat(
 }
 
 /** Backend WebSocket base for the voice intake (rewrites don't proxy upgrades). */
-export function voiceWsUrl(): string {
+export function voiceWsUrl(mode?: "conversation" | "interview"): string {
   const base =
     process.env.NEXT_PUBLIC_WS_URL ??
     (typeof window !== "undefined"
       ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:8080`
       : "ws://localhost:8080");
-  return `${base}/api/voice`;
+  const query = mode === "interview" ? "?mode=interview" : "";
+  return `${base}/api/voice${query}`;
 }

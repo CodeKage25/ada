@@ -1,26 +1,35 @@
 """Voice conversation via the Gemini Live API (native audio).
 
-connect opens a Live session grounded in what Ada already knows about the caller;
-extract turns the resulting transcript into the {target_role, cv_text} the typed
-form also produces. Requires live Vertex credentials.
+connect opens a Live session grounded in what Ada already knows about the caller,
+in one of two modes: an open career conversation, or a spoken mock interview.
+Requires live Vertex credentials.
 """
-import json
+from typing import Literal
 
 from google.genai import types
 
 from ada.config import get_settings
 from ada.vertex import vertex_client
 
-_BASE_PERSONA = """You are Ada, a warm and genuinely curious career coach having a real \
-spoken phone conversation with someone about their working life. This is a conversation, \
-not a form. React like a person — brief acknowledgements, the occasional reflection back \
-("that sounds like…"). Ask ONE question at a time, keep your turns short, and let them \
-talk. Don't give long advice; this is about hearing their story. Naturally, over the \
-conversation, come to understand their experience, skills, education, and the role they \
-want next — but let it surface, never interrogate."""
+Mode = Literal["conversation", "interview"]
 
-_COLD_OPEN = """Open naturally: greet them, then ask what they do and what they enjoy most \
-about it."""
+_CONVERSATION_PERSONA = """You are Ada, a warm and genuinely curious career coach having a \
+real spoken phone conversation with someone about their working life. This is a \
+conversation, not a form. React like a person — brief acknowledgements, the occasional \
+reflection back ("that sounds like…"). Ask ONE question at a time, keep your turns short, \
+and let them talk. Don't give long advice; this is about hearing their story. Naturally, \
+over the conversation, come to understand their experience, skills, and what they want \
+next — but let it surface, never interrogate."""
+
+_INTERVIEW_PERSONA = """You are Ada, running a realistic spoken mock interview to help \
+someone practice. Interview them for the kind of role they're targeting, grounded in their \
+background. Ask ONE question at a time and WAIT for the full answer — behavioural and \
+role-specific questions, following up on what they say the way a sharp interviewer would \
+("can you walk me through how you approached that?"). Keep your own turns short. Don't \
+coach mid-answer. Near the end, give brief, honest, specific feedback: what landed, and the \
+one or two things to tighten. Stay encouraging but real."""
+
+_COLD_OPEN = """Open naturally: greet them and begin."""
 
 _GROUNDED_RULES = """You ALREADY KNOW this person from their profile and CV (below). Use it.
 
@@ -28,17 +37,11 @@ _GROUNDED_RULES = """You ALREADY KNOW this person from their profile and CV (bel
 experience", "what are your skills?"). You know these.
 - OPEN by greeting them by name and naming something specific you see — e.g. "I can see \
 you're a {{role}} — {{specific detail}}. …". Make them feel recognised in the first breath.
-- Ask questions that only make sense for THIS person: probe the work they're proud of, a \
-gap or a pivot you notice, what they want next. Reference their actual roles and companies.
+- Make every question specific to THIS person — reference their actual roles and companies.
 - Treat the context as known truth; confirm or go deeper, don't re-collect it.
 
 WHAT YOU KNOW ABOUT THIS PERSON:
 {context}"""
-
-_EXTRACT_SYSTEM = """From this conversation transcript between Ada and a candidate, extract \
-the candidate's target role and a plain-text CV draft built ONLY from what the candidate \
-actually said or confirmed (experience, skills, education, dates). Never invent facts. \
-Return JSON of the exact shape: {"target_role": str, "cv_text": str}."""
 
 _MAX_CONTEXT_CHARS = 6_000
 
@@ -66,10 +69,11 @@ def format_candidate_context(
     return "\n\n".join(parts)[:_MAX_CONTEXT_CHARS]
 
 
-def _system_instruction(context: str | None) -> str:
+def _system_instruction(context: str | None, mode: Mode) -> str:
+    persona = _INTERVIEW_PERSONA if mode == "interview" else _CONVERSATION_PERSONA
     if context:
-        return f"{_BASE_PERSONA}\n\n{_GROUNDED_RULES.format(context=context)}"
-    return f"{_BASE_PERSONA}\n\n{_COLD_OPEN}"
+        return f"{persona}\n\n{_GROUNDED_RULES.format(context=context)}"
+    return f"{persona}\n\n{_COLD_OPEN}"
 
 
 class VoiceIntake:
@@ -77,27 +81,14 @@ class VoiceIntake:
         s = get_settings()
         self._client = vertex_client()
         self._live_model = s.live_model
-        self._model = s.vertex_model
 
-    def connect(self, context: str | None = None):
+    def connect(self, context: str | None = None, mode: Mode = "conversation"):
         """Async context manager yielding a Live session grounded in `context` when the
         caller is known. Emits native audio plus input/output transcription."""
         config = types.LiveConnectConfig(
             response_modalities=[types.Modality.AUDIO],
-            system_instruction=_system_instruction(context),
+            system_instruction=_system_instruction(context, mode),
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
         )
         return self._client.aio.live.connect(model=self._live_model, config=config)
-
-    async def extract(self, transcript: str) -> dict:
-        resp = await self._client.aio.models.generate_content(
-            model=self._model,
-            contents=transcript,
-            config=types.GenerateContentConfig(
-                system_instruction=_EXTRACT_SYSTEM,
-                temperature=0.2,
-                response_mime_type="application/json",
-            ),
-        )
-        return json.loads(resp.text or "{}")
