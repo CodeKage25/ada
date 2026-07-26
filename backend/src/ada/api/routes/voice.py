@@ -1,10 +1,10 @@
-"""WebSocket relay for Gemini Live voice intake.
+"""WebSocket relay for the Gemini Live voice conversation.
 
-Bridges browser audio/text frames <-> a Live session and streams the running
-transcript back. On {"type":"end"} it extracts {target_role, cv_text} from the
-transcript and returns it as {"type":"intake", ...} for the client to feed into
-POST /api/runs. Decoupled from the paid loop; if Live is unavailable it returns a
-clean error frame rather than crashing the socket.
+Grounds the session in what Ada already knows about the signed-in caller (profile,
+latest CV, remembered facts) so she opens with recognition instead of asking what
+she can already see. Bridges browser audio/text frames <-> a Live session, streams
+audio + transcript back, and on {"type":"end"} extracts {target_role, cv_text} for
+POST /api/runs. If Live is unavailable it returns a clean error frame.
 
 Client frames:  {"type":"audio","data": <base64 pcm16@16k>}
                 {"type":"text","data": "..."}
@@ -19,18 +19,60 @@ import base64
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google.genai import types
 
-from ada.services.voice import VoiceIntake
+from ada.auth.repository import AuthRepository
+from ada.auth.tokens import hash_token
+from ada.config import get_settings
+from ada.db.repositories import (
+    ProfileRepository,
+    UploadedDocumentRepository,
+    UserMemoryRepository,
+)
+from ada.db.session import _session_factory
+from ada.observability import log
+from ada.services.memory import MemoryService
+from ada.services.voice import VoiceIntake, format_candidate_context
 
 router = APIRouter(tags=["voice"])
+
+_RECALL_QUERY = "career background, current role, key skills, experience, and goals"
+
+
+async def _load_context(ws: WebSocket) -> str | None:
+    """Best-effort: resolve the caller from their session cookie and assemble
+    everything Ada knows. Any failure (anonymous, no profile, no creds) -> None."""
+    raw = ws.cookies.get(get_settings().session_cookie)
+    if not raw:
+        return None
+    try:
+        async with _session_factory() as session:
+            user = await AuthRepository(session).user_for_session(hash_token(raw))
+            if user is None:
+                return None
+            profile = await ProfileRepository(session).get(user.id)
+            uploads = await UploadedDocumentRepository(session).list_for_user(user.id)
+            cv_text = uploads[0].cv_text if uploads else None
+            memories = await MemoryService().recall(
+                UserMemoryRepository(session), user.id, _RECALL_QUERY
+            )
+        return format_candidate_context(
+            full_name=profile.full_name if profile else None,
+            profile_text=profile.profile_text if profile else None,
+            cv_text=cv_text,
+            memories=memories,
+        )
+    except Exception as exc:  # noqa: BLE001 — grounding is best-effort; fall back to cold open
+        log.warning("voice_context_failed", error=str(exc))
+        return None
 
 
 @router.websocket("/voice")
 async def voice(ws: WebSocket) -> None:
     await ws.accept()
+    context = await _load_context(ws)
     intake = VoiceIntake()
     transcript: list[str] = []
     try:
-        async with intake.connect() as session:
+        async with intake.connect(context) as session:
 
             last_speaker = ""
 
@@ -63,6 +105,11 @@ async def voice(ws: WebSocket) -> None:
                         await relay("Ada", sc.output_transcription.text)
 
             out_task = asyncio.create_task(pump_out())
+            # Ada opens the call herself — grounded in context when the caller is known.
+            await session.send_client_content(
+                turns="The candidate just joined the call. Greet them and begin.",
+                turn_complete=True,
+            )
             while True:
                 msg = await ws.receive_json()
                 kind = msg.get("type")
@@ -82,7 +129,7 @@ async def voice(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         return
     except Exception as exc:  # noqa: BLE001 — surface any Live failure to the client
-        await ws.send_json({"type": "error", "message": f"voice intake unavailable: {exc!r}"})
+        await ws.send_json({"type": "error", "message": f"voice unavailable: {exc!r}"})
     finally:
         try:
             await ws.close()
