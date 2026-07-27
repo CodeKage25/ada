@@ -135,7 +135,7 @@ export function PageHeader({
 export function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <p className="eyebrow mb-4 flex items-center gap-3">
-      <span className="h-px w-8 bg-accent" aria-hidden />
+      <span className="h-px w-8 bg-muted/50" aria-hidden />
       {children}
     </p>
   );
