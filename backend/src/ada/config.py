@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     stripe_secret_key: str = Field(default="", repr=False)
     stripe_publishable_key: str = ""
     stripe_webhook_secret: str = Field(default="", repr=False)
-    stripe_price_usd_cents: int = 1500
+    stripe_price_usd_cents: int = 999
     stripe_currency: str = "usd"
 
     # subscription plan codes (created in the Paystack/Stripe dashboards), keyed
