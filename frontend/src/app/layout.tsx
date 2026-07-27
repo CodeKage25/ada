@@ -35,8 +35,8 @@ export const viewport: Viewport = {
   // fixed CTAs pad themselves with env(safe-area-inset-bottom).
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f3f1ec" },
-    { media: "(prefers-color-scheme: dark)", color: "#16120d" },
+    { media: "(prefers-color-scheme: light)", color: "#f1f4f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1514" },
   ],
 };
 

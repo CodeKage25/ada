@@ -243,7 +243,7 @@ export default function Landing() {
                       <dt className="display text-xl sm:text-2xl">
                         {row.item}
                         {row.seal && (
-                          <span className="ml-2 inline-block size-2 rounded-full bg-accent align-middle" aria-hidden />
+                          <span className="ml-2 inline-block size-2 rounded-full bg-gold align-middle" aria-hidden />
                         )}
                       </dt>
                       <span className="mx-1 flex-1 border-b border-dotted border-line" aria-hidden />
