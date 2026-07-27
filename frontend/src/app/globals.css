@@ -1,23 +1,22 @@
 @import "tailwindcss";
 
-/* Design tokens — the "Bureau" system. Ada's material world is stationery:
-   the CV is paper, the offer is signed in ink, the deal is sealed in wax.
-   Bone paper + espresso ink, one rare accent (sealing-wax oxblood), bronze
-   permitted only as hairline metal. No tech blue, no success green, no
-   luxury gold. Dark mode is the same study after dark; .noir applies the
+/* Design tokens — the "Patina" system. Copper and its oxidation: fog
+   porcelain + deep sea-slate ink, one dusty verdigris accent (the turquoise
+   of aged copper — never tech cyan), warm copper as the rare metal for the
+   hired moment. Dark mode is the same room after dark; .noir applies the
    dark set to a subtree (the marketing site is noir-fixed). */
 :root {
-  --bg: #f3f1ec;
-  --surface: #fcfbf8;
-  --surface-2: #eae7df;
-  --ink: #191510;
-  --muted: #6d665c;
-  --line: #e0dcd2;
-  --accent: #7d2b35;
-  --accent-ink: #fcfbf8;
-  --accent-soft: #f3e4e2;
-  --gold: #8a6f43;
-  --gold-soft: #efe8d9;
+  --bg: #f1f4f2;
+  --surface: #fbfcfb;
+  --surface-2: #e6ebe8;
+  --ink: #101b1a;
+  --muted: #5e6f6c;
+  --line: #dbe3e0;
+  --accent: #2a746e;
+  --accent-ink: #fbfcfb;
+  --accent-soft: #ddefec;
+  --gold: #9c6b4b;
+  --gold-soft: #f2e6dd;
   --success: #47623c;
   --success-soft: #e7ecdf;
   --warn: #92600a;
@@ -27,23 +26,23 @@
   --radius: 14px;
   --shadow-card: 0 1px 2px rgba(25, 21, 16, 0.04), 0 4px 16px rgba(25, 21, 16, 0.04);
   --shadow-lift: 0 2px 4px rgba(25, 21, 16, 0.05), 0 16px 40px rgba(25, 21, 16, 0.1);
-  --shadow-btn: 0 1px 2px rgba(25, 21, 16, 0.16), 0 4px 12px rgba(125, 43, 53, 0.22);
-  --glow: rgba(125, 43, 53, 0.06);
+  --shadow-btn: 0 1px 2px rgba(16, 27, 26, 0.16), 0 4px 12px rgba(42, 116, 110, 0.22);
+  --glow: rgba(42, 116, 110, 0.06);
 }
 
 .dark,
 .noir {
-  --bg: #16120d;
-  --surface: #1e1913;
-  --surface-2: #251f18;
-  --ink: #efeade;
-  --muted: #a1988a;
-  --line: #322b22;
-  --accent: #c2555e;
-  --accent-ink: #1d0e0f;
-  --accent-soft: #38201f;
-  --gold: #c9a36a;
-  --gold-soft: #2d251a;
+  --bg: #0d1514;
+  --surface: #131d1b;
+  --surface-2: #182420;
+  --ink: #e9f0ed;
+  --muted: #8fa39e;
+  --line: #243230;
+  --accent: #6fc3b8;
+  --accent-ink: #0a1513;
+  --accent-soft: #16332f;
+  --gold: #c98d68;
+  --gold-soft: #2b2019;
   --success: #94ad84;
   --success-soft: #232b1e;
   --warn: #fbbf24;
@@ -52,8 +51,8 @@
   --danger-soft: #2e1715;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.45);
-  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(194, 85, 94, 0.2);
-  --glow: rgba(201, 163, 106, 0.07);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(111, 195, 184, 0.18);
+  --glow: rgba(201, 141, 104, 0.06);
 }
 .noir {
   color-scheme: dark;
