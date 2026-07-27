@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Instrument_Serif } from "next/font/google";
+import { Newsreader, Schibsted_Grotesk, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const instrumentSerif = Instrument_Serif({
+const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted" });
+const newsreader = Newsreader({
   subsets: ["latin"],
-  weight: "400",
   style: ["normal", "italic"],
-  variable: "--font-instrument-serif",
+  axes: ["opsz"],
+  variable: "--font-newsreader",
 });
+const splineMono = Spline_Sans_Mono({ subsets: ["latin"], variable: "--font-spline-mono" });
 
 export const metadata: Metadata = {
   // Absolute URLs for OG/Twitter cards; set NEXT_PUBLIC_SITE_URL in prod.
@@ -34,8 +35,8 @@ export const viewport: Viewport = {
   // fixed CTAs pad themselves with env(safe-area-inset-bottom).
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#12110e" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f1ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#16120d" },
   ],
 };
 
@@ -50,7 +51,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`${inter.variable} ${instrumentSerif.variable}`}>{children}</body>
+      <body className={`${schibsted.variable} ${newsreader.variable} ${splineMono.variable}`}>
+        {children}
+      </body>
     </html>
   );
 }

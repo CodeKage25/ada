@@ -145,9 +145,9 @@ function VoiceCall() {
           <p className="text-center text-xs text-muted">Uses your microphone.</p>
         </Card>
       ) : (
-        <div className="relative overflow-hidden rounded-card border border-[#2b2925] bg-[#12110e] text-[#f2f0ea] shadow-lift">
+        <div className="relative overflow-hidden rounded-card border border-[#2b2925] bg-[#1d0e0f] text-[#f2f0ea] shadow-lift">
           <div
-            className="pointer-events-none absolute left-1/2 top-8 size-80 -translate-x-1/2 rounded-full bg-[#8b85f4]/15 blur-3xl"
+            className="pointer-events-none absolute left-1/2 top-8 size-80 -translate-x-1/2 rounded-full bg-[#c2555e]/15 blur-3xl"
             aria-hidden
           />
           <div className="relative flex flex-col items-center px-7 pb-7 pt-10 text-center">
@@ -175,7 +175,7 @@ function VoiceCall() {
                 ["0s", "0.6s", "1.2s"].map((delay) => (
                   <span
                     key={delay}
-                    className="ring-ping absolute inset-0 rounded-full border-[1.5px] border-[#8b85f4]/45"
+                    className="ring-ping absolute inset-0 rounded-full border-[1.5px] border-[#c2555e]/45"
                     style={{ animationDelay: delay }}
                     aria-hidden
                   />
@@ -183,8 +183,8 @@ function VoiceCall() {
               <div
                 className={`absolute inset-2.5 flex items-center justify-center rounded-full ${
                   state === "live"
-                    ? "bg-[#8b85f4] text-[#12110e] shadow-[0_0_60px_rgba(139,133,244,0.4)]"
-                    : "pulse-soft bg-[#232145] text-[#8b85f4]"
+                    ? "bg-[#c2555e] text-[#1d0e0f] shadow-[0_0_60px_rgba(194,85,94,0.4)]"
+                    : "pulse-soft bg-[#38201f] text-[#c2555e]"
                 }`}
               >
                 {state === "connecting" ? (
@@ -199,7 +199,7 @@ function VoiceCall() {
                 {[8, 16, 22, 12, 18, 7, 14].map((h, i) => (
                   <span
                     key={i}
-                    className="eq-bar w-[3px] rounded-full bg-[#8b85f4]"
+                    className="eq-bar w-[3px] rounded-full bg-[#c2555e]"
                     style={{ height: h, animationDelay: `${i * 0.13}s` }}
                   />
                 ))}
@@ -214,7 +214,7 @@ function VoiceCall() {
               <button
                 onClick={end}
                 disabled={state === "ending"}
-                className="flex items-center justify-center gap-2 rounded-full bg-[#8b85f4] px-8 py-3 text-sm font-medium text-[#12110e] shadow-[0_4px_14px_rgba(139,133,244,0.25)] transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 rounded-full bg-[#c2555e] px-8 py-3 text-sm font-medium text-[#1d0e0f] shadow-[0_4px_14px_rgba(194,85,94,0.25)] transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 <PhoneOff className="size-4" /> End call
               </button>
