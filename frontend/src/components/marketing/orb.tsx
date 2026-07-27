@@ -18,11 +18,11 @@ const HARMONICS = [
   { lobes: 8, speed: 1.42, phase: 4.1, amp: 0.005 },
 ];
 
-// The light inside: one gold ember, two greens. Positions orbit slowly.
+// The light inside: an ember — warm white heart, amber body, a wax-red edge.
 const LOBES = [
-  { color: "236, 190, 88", r: 0.7, ox: -0.26, oy: -0.28, speed: 0.21, alpha: 0.85 },
-  { color: "62, 207, 142", r: 0.85, ox: 0.32, oy: 0.16, speed: -0.16, alpha: 0.62 },
-  { color: "56, 189, 178", r: 0.6, ox: -0.02, oy: 0.36, speed: 0.11, alpha: 0.5 },
+  { color: "244, 226, 198", r: 0.62, ox: -0.24, oy: -0.28, speed: 0.21, alpha: 0.8 },
+  { color: "216, 160, 88", r: 0.85, ox: 0.3, oy: 0.14, speed: -0.16, alpha: 0.6 },
+  { color: "190, 84, 88", r: 0.62, ox: -0.04, oy: 0.38, speed: 0.11, alpha: 0.48 },
 ];
 
 function fmt(seconds: number): string {
@@ -144,9 +144,9 @@ export function HeroOrb() {
       // Ambient glow around the body — light escaping into the dark.
       const haloR = Math.min(R * 1.7, Math.min(w, h) * 0.495);
       const halo = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, haloR);
-      halo.addColorStop(0, `rgba(62, 207, 142, ${0.2 + level * 0.14})`);
-      halo.addColorStop(0.6, `rgba(227, 179, 76, ${0.07 + level * 0.06})`);
-      halo.addColorStop(1, "rgba(227, 179, 76, 0)");
+      halo.addColorStop(0, `rgba(216, 160, 88, ${0.18 + level * 0.14})`);
+      halo.addColorStop(0.6, `rgba(190, 84, 88, ${0.06 + level * 0.06})`);
+      halo.addColorStop(1, "rgba(190, 84, 88, 0)");
       ctx.fillStyle = halo;
       ctx.beginPath();
       ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
@@ -155,8 +155,8 @@ export function HeroOrb() {
       // The body: near-black glass.
       blobPath(cx, cy, R, energy);
       const base = ctx.createRadialGradient(cx, cy - R * 0.2, R * 0.2, cx, cy, R * 1.05);
-      base.addColorStop(0, "#153426");
-      base.addColorStop(1, "#0a150d");
+      base.addColorStop(0, "#2b2115");
+      base.addColorStop(1, "#120d08");
       ctx.fillStyle = base;
       ctx.fill();
 
@@ -182,7 +182,7 @@ export function HeroOrb() {
 
       // A hairline rim so the glass has an edge against the dark.
       blobPath(cx, cy, R, energy);
-      ctx.strokeStyle = `rgba(236, 242, 234, ${0.16 + level * 0.12})`;
+      ctx.strokeStyle = `rgba(239, 234, 222, ${0.16 + level * 0.12})`;
       ctx.lineWidth = 1;
       ctx.stroke();
 
@@ -270,9 +270,9 @@ export function HeroOrb() {
         <button
           type="button"
           onClick={toggle}
-          className="inline-flex items-center gap-2.5 rounded-full border border-line bg-surface/60 py-2 pl-2.5 pr-4 text-sm backdrop-blur transition-colors hover:border-accent/50"
+          className="inline-flex items-center gap-2.5 rounded-[10px] border border-line bg-surface/60 py-2 pl-2.5 pr-4 text-sm backdrop-blur transition-colors hover:border-accent/50"
         >
-          <span className="flex size-7 items-center justify-center rounded-full bg-accent text-accent-ink">
+          <span className="flex size-7 items-center justify-center rounded-[7px] bg-accent text-accent-ink">
             {playing ? <Pause className="size-3" /> : <Play className="ml-px size-3" />}
           </span>
           <span className="font-mono text-xs tabular-nums text-muted" aria-live="polite">

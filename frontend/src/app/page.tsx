@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   CareersBand,
   HeroHeadline,
-  Magnetic,
   Reveal,
   ScrollProgress,
   Timeline,
@@ -110,9 +109,8 @@ export default function Landing() {
         {/* Hero — asymmetric editorial composition: type carries the left
             column, the live demo overlaps in from the right */}
         <section className="glow-field relative overflow-hidden">
-          <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
-          {/* Mobile order is headline → orb → the rest, so the signature is in
-              the first viewport; on desktop the orb owns the right column. */}
+          {/* Mobile reads headline → value → CTA → orb: understand Ada first,
+              then meet her. On desktop the orb owns the right column. */}
           <div className="mx-auto grid max-w-6xl gap-y-12 px-5 pb-24 pt-32 sm:pt-36 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-x-4 lg:gap-y-0 lg:[grid-template-areas:'head_orb'_'body_orb']">
             <div className="lg:[grid-area:head]">
               <Reveal>
@@ -127,9 +125,6 @@ export default function Landing() {
               </Reveal>
               <HeroHeadline />
             </div>
-            <Reveal delay={0.35} className="lg:mt-14 lg:justify-self-center lg:[grid-area:orb]">
-              <HeroOrb />
-            </Reveal>
             <div className="lg:[grid-area:body]">
               <Reveal delay={0.5}>
                 <p className="mt-8 max-w-md text-lg leading-relaxed text-muted">
@@ -140,14 +135,12 @@ export default function Landing() {
               </Reveal>
               <Reveal delay={0.6}>
                 <div className="mt-9 flex flex-wrap items-center gap-4">
-                  <Magnetic>
-                    <Link href="/app/new">
-                      <Button className="group !px-8 !py-4 text-base">
-                        Start your run
-                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                      </Button>
-                    </Link>
-                  </Magnetic>
+                  <Link href="/app/new">
+                    <Button className="group !px-8 !py-4 text-base">
+                      Start your run
+                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                  </Link>
                 </div>
               </Reveal>
               <Reveal delay={0.7}>
@@ -162,6 +155,9 @@ export default function Landing() {
                 </p>
               </Reveal>
             </div>
+            <Reveal delay={0.35} className="mt-2 lg:mt-14 lg:justify-self-center lg:[grid-area:orb]">
+              <HeroOrb />
+            </Reveal>
           </div>
         </section>
 
@@ -266,14 +262,14 @@ export default function Landing() {
               The next role is already out there. Ada gets you ready for it — whatever
               the industry.
             </p>
-            <Magnetic className="mt-9">
+            <div className="mt-9">
               <Link href="/app/new" className="inline-block">
                 <Button className="group !bg-bg !px-9 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
                   Start your run
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                 </Button>
               </Link>
-            </Magnetic>
+            </div>
             <p className="mt-6 text-xs text-bg/50">
               ₦2,000 / $15 per run · Unlimited from ₦5,000 / $5 a month · Results in
               minutes

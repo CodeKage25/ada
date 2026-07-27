@@ -7,10 +7,10 @@ export const alt = "Ada — the career agent that gets you hired";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const INK = "#0b120e";
-const PAPER = "#ecf2ea";
-const MUTED = "#94a496";
-const ACCENT = "#e3b34c";
+const INK = "#16120d";
+const PAPER = "#efeade";
+const MUTED = "#a1988a";
+const ACCENT = "#c2555e";
 
 export default function OpengraphImage() {
   return new ImageResponse(

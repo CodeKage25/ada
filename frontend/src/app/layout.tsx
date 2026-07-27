@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Schibsted_Grotesk, Spline_Sans_Mono } from "next/font/google";
+import { Newsreader, Schibsted_Grotesk, Spline_Sans_Mono } from "next/font/google";
 import "./globals.css";
 
 const schibsted = Schibsted_Grotesk({ subsets: ["latin"], variable: "--font-schibsted" });
-const fraunces = Fraunces({
+const newsreader = Newsreader({
   subsets: ["latin"],
   style: ["normal", "italic"],
-  axes: ["opsz", "SOFT"],
-  variable: "--font-fraunces",
+  axes: ["opsz"],
+  variable: "--font-newsreader",
 });
 const splineMono = Spline_Sans_Mono({ subsets: ["latin"], variable: "--font-spline-mono" });
 
@@ -35,8 +35,8 @@ export const viewport: Viewport = {
   // fixed CTAs pad themselves with env(safe-area-inset-bottom).
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f7f3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b120e" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f1ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#16120d" },
   ],
 };
 
@@ -51,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body className={`${schibsted.variable} ${fraunces.variable} ${splineMono.variable}`}>
+      <body className={`${schibsted.variable} ${newsreader.variable} ${splineMono.variable}`}>
         {children}
       </body>
     </html>

@@ -91,7 +91,7 @@ export function HeroHeadline() {
       <span className="hidden lg:inline-block lg:w-[1.1em]" aria-hidden />
       {lines[1].map(word)}
       <motion.em
-        className="relative inline-block text-gold"
+        className="relative inline-block text-accent"
         initial={{ opacity: 0, y: 20, filter: "blur(10px)" }}
         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.6, delay: 0.15 + 5 * 0.08, ease: EASE }}

@@ -1,58 +1,59 @@
 @import "tailwindcss";
 
-/* Design tokens — the "Greenlight" system. Porcelain paper + green-black ink,
-   one viridian accent (green = the go signal, the offer, the hired moment),
-   and aged gold reserved for success. Dark mode mirrors the relationships at
-   lower luminance; .noir applies the dark set to a subtree (the marketing
-   site is noir-fixed regardless of the app theme). */
+/* Design tokens — the "Bureau" system. Ada's material world is stationery:
+   the CV is paper, the offer is signed in ink, the deal is sealed in wax.
+   Bone paper + espresso ink, one rare accent (sealing-wax oxblood), bronze
+   permitted only as hairline metal. No tech blue, no success green, no
+   luxury gold. Dark mode is the same study after dark; .noir applies the
+   dark set to a subtree (the marketing site is noir-fixed). */
 :root {
-  --bg: #f6f7f3;
-  --surface: #ffffff;
-  --surface-2: #edf0e8;
-  --ink: #101812;
-  --muted: #5e6b60;
-  --line: #dee4d8;
-  --accent: #0e7a4a;
-  --accent-ink: #ffffff;
-  --accent-soft: #e2f2e7;
-  --gold: #93701d;
-  --gold-soft: #f4ecd6;
-  --success: #1a7f4b;
-  --success-soft: #e3f4ea;
+  --bg: #f3f1ec;
+  --surface: #fcfbf8;
+  --surface-2: #eae7df;
+  --ink: #191510;
+  --muted: #6d665c;
+  --line: #e0dcd2;
+  --accent: #7d2b35;
+  --accent-ink: #fcfbf8;
+  --accent-soft: #f3e4e2;
+  --gold: #8a6f43;
+  --gold-soft: #efe8d9;
+  --success: #47623c;
+  --success-soft: #e7ecdf;
   --warn: #92600a;
   --warn-soft: #fbf0d9;
   --danger: #b42318;
   --danger-soft: #fbe9e7;
-  --radius: 16px;
-  --shadow-card: 0 1px 2px rgba(16, 24, 18, 0.04), 0 4px 16px rgba(16, 24, 18, 0.04);
-  --shadow-lift: 0 2px 4px rgba(16, 24, 18, 0.05), 0 16px 40px rgba(16, 24, 18, 0.1);
-  --shadow-btn: 0 1px 2px rgba(16, 24, 18, 0.16), 0 4px 12px rgba(14, 122, 74, 0.24);
-  --glow: rgba(14, 122, 74, 0.1);
+  --radius: 14px;
+  --shadow-card: 0 1px 2px rgba(25, 21, 16, 0.04), 0 4px 16px rgba(25, 21, 16, 0.04);
+  --shadow-lift: 0 2px 4px rgba(25, 21, 16, 0.05), 0 16px 40px rgba(25, 21, 16, 0.1);
+  --shadow-btn: 0 1px 2px rgba(25, 21, 16, 0.16), 0 4px 12px rgba(125, 43, 53, 0.22);
+  --glow: rgba(125, 43, 53, 0.06);
 }
 
 .dark,
 .noir {
-  --bg: #0b120e;
-  --surface: #111a14;
-  --surface-2: #16211a;
-  --ink: #ecf2ea;
-  --muted: #94a496;
-  --line: #223027;
-  --accent: #3ecf8e;
-  --accent-ink: #06130b;
-  --accent-soft: #123322;
-  --gold: #e3b34c;
-  --gold-soft: #2c2412;
-  --success: #4ade80;
-  --success-soft: #14291c;
+  --bg: #16120d;
+  --surface: #1e1913;
+  --surface-2: #251f18;
+  --ink: #efeade;
+  --muted: #a1988a;
+  --line: #322b22;
+  --accent: #c2555e;
+  --accent-ink: #1d0e0f;
+  --accent-soft: #38201f;
+  --gold: #c9a36a;
+  --gold-soft: #2d251a;
+  --success: #94ad84;
+  --success-soft: #232b1e;
   --warn: #fbbf24;
   --warn-soft: #2b2210;
   --danger: #f87171;
   --danger-soft: #2e1715;
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.35), 0 16px 40px rgba(0, 0, 0, 0.45);
-  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(62, 207, 142, 0.22);
-  --glow: rgba(62, 207, 142, 0.1);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(194, 85, 94, 0.2);
+  --glow: rgba(201, 163, 106, 0.07);
 }
 .noir {
   color-scheme: dark;
@@ -76,7 +77,7 @@
   --color-danger-soft: var(--danger-soft);
   --color-gold: var(--gold);
   --color-gold-soft: var(--gold-soft);
-  --font-serif: var(--font-fraunces), Georgia, serif;
+  --font-serif: var(--font-newsreader), Georgia, serif;
   --font-sans: var(--font-schibsted), system-ui, sans-serif;
   --font-mono: var(--font-spline-mono), ui-monospace, monospace;
   --radius-card: var(--radius);
@@ -104,7 +105,7 @@ body::after {
   inset: 0;
   z-index: 80;
   pointer-events: none;
-  opacity: 0.032;
+  opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .dark body::after {
@@ -131,18 +132,18 @@ summary,
   cursor: pointer;
 }
 
-/* Editorial display headlines — Fraunces, slightly softened */
+/* Editorial display headlines — Newsreader at display optical size */
 .display {
   font-family: var(--font-serif);
-  letter-spacing: -0.02em;
-  line-height: 1.04;
-  font-weight: 420;
-  font-variation-settings: "SOFT" 55;
+  letter-spacing: -0.022em;
+  line-height: 1.02;
+  font-weight: 430;
+  font-variation-settings: "opsz" 72;
 }
 
 /* Fluid type: scales continuously with viewport, no breakpoint jumps */
 .fluid-hero {
-  font-size: clamp(3rem, 7.5vw + 1rem, 6.75rem);
+  font-size: clamp(3.1rem, 7.8vw + 1rem, 7.25rem);
   line-height: 1;
   letter-spacing: -0.02em;
 }
