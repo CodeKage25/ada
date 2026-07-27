@@ -111,8 +111,10 @@ export default function Landing() {
             column, the live demo overlaps in from the right */}
         <section className="glow-field relative overflow-hidden">
           <div className="dot-grid absolute inset-0 -z-10" aria-hidden />
-          <div className="mx-auto grid max-w-6xl items-start gap-14 px-5 pb-24 pt-32 sm:pt-36 lg:grid-cols-[1.15fr_0.85fr] lg:gap-4">
-            <div>
+          {/* Mobile order is headline → orb → the rest, so the signature is in
+              the first viewport; on desktop the orb owns the right column. */}
+          <div className="mx-auto grid max-w-6xl gap-y-12 px-5 pb-24 pt-32 sm:pt-36 lg:grid-cols-[1.15fr_0.85fr] lg:items-start lg:gap-x-4 lg:gap-y-0 lg:[grid-template-areas:'head_orb'_'body_orb']">
+            <div className="lg:[grid-area:head]">
               <Reveal>
                 <p className="eyebrow mb-8 flex items-center gap-3">
                   <span className="h-px w-10 bg-accent" aria-hidden />
@@ -124,6 +126,11 @@ export default function Landing() {
                 </p>
               </Reveal>
               <HeroHeadline />
+            </div>
+            <Reveal delay={0.35} className="lg:mt-14 lg:justify-self-center lg:[grid-area:orb]">
+              <HeroOrb />
+            </Reveal>
+            <div className="lg:[grid-area:body]">
               <Reveal delay={0.5}>
                 <p className="mt-8 max-w-md text-lg leading-relaxed text-muted">
                   One run: your CV rewritten for the role you want — in any industry —
@@ -155,9 +162,6 @@ export default function Landing() {
                 </p>
               </Reveal>
             </div>
-            <Reveal delay={0.35} className="lg:mt-14 lg:justify-self-center">
-              <HeroOrb />
-            </Reveal>
           </div>
         </section>
 
