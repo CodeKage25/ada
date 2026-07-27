@@ -6,12 +6,10 @@ import {
   HeroHeadline,
   Reveal,
   ScrollProgress,
-  Timeline,
 } from "@/components/marketing/demo";
 import { HeroOrb } from "@/components/marketing/orb";
-import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
-import { Button, Card, Eyebrow, Logo } from "@/components/ui";
+import { Eyebrow, Logo } from "@/components/ui";
 
 const STEPS = [
   {
@@ -69,28 +67,25 @@ const FAQS = [
 
 function Nav() {
   return (
-    <header className="fixed inset-x-0 top-4 z-40 px-4">
-      <div className="mx-auto flex max-w-3xl items-center justify-between rounded-full border border-line/70 bg-surface/80 py-2 pl-5 pr-2 shadow-card backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-line/70 bg-bg/85 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <Link href="/" aria-label="Ada home">
           <Logo />
         </Link>
-        <nav className="flex items-center gap-1 text-sm text-muted max-sm:hidden">
-          <a href="#how" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
-            How it works
-          </a>
-          <a href="#pricing" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
-            Pricing
-          </a>
-          <a href="#faqs" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
-            FAQs
-          </a>
+        <nav className="eyebrow flex items-center gap-8 !text-muted max-sm:hidden">
+          <a href="#how" className="transition-colors hover:!text-ink">How it works</a>
+          <a href="#pricing" className="transition-colors hover:!text-ink">The tariff</a>
+          <a href="#faqs" className="transition-colors hover:!text-ink">Questions</a>
         </nav>
-        <div className="flex items-center gap-1.5">
-          <Link href="/login" className="px-2 text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
+        <div className="flex items-center gap-5">
+          <Link href="/login" className="text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
             Sign in
           </Link>
-          <Link href="/app">
-            <Button className="!py-2 text-[13px]">Open Ada</Button>
+          <Link
+            href="/app"
+            className="rounded-[8px] bg-ink px-4 py-2 text-[13px] font-medium text-bg transition-opacity hover:opacity-90"
+          >
+            Open Ada
           </Link>
         </div>
       </div>
@@ -115,7 +110,7 @@ export default function Landing() {
             <div className="lg:[grid-area:head]">
               <Reveal>
                 <p className="eyebrow mb-8 flex items-center gap-3">
-                  <span className="h-px w-10 bg-accent" aria-hidden />
+                  <span className="h-px w-10 bg-muted/50" aria-hidden />
                   Autonomous career agent
                   <span className="flex items-center gap-1.5 normal-case tracking-normal text-success">
                     <span className="pulse-soft size-1.5 rounded-full bg-success" />
@@ -135,17 +130,18 @@ export default function Landing() {
               </Reveal>
               <Reveal delay={0.6}>
                 <div className="mt-9 flex flex-wrap items-center gap-4">
-                  <Link href="/app/new">
-                    <Button className="group !px-8 !py-4 text-base">
-                      Start your run
-                      <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
+                  <Link
+                    href="/app/new"
+                    className="group inline-flex items-center gap-2.5 rounded-[10px] bg-ink px-8 py-4 text-base font-medium text-bg transition-opacity hover:opacity-90"
+                  >
+                    Start your run
+                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
               </Reveal>
               <Reveal delay={0.7}>
                 {/* Sidenote, not a stat grid: the numbers live inside a sentence */}
-                <p className="mt-12 max-w-md border-l-2 border-accent/40 pl-5 text-sm leading-loose text-muted">
+                <p className="mt-12 max-w-md border-l border-line pl-5 text-sm leading-loose text-muted">
                   Under <em className="display text-xl text-ink">three minutes</em> from
                   start to results. Pay{" "}
                   <em className="display text-xl text-ink">per run</em>, or go
@@ -164,16 +160,19 @@ export default function Landing() {
         {/* Every-career band */}
         <CareersBand />
 
-        {/* Problem band — one statement, set still. The words carry it. */}
-        <section className="bg-ink py-32 text-bg">
-          <div className="mx-auto max-w-4xl px-5">
-            <p className="eyebrow mb-6 !text-bg/50">The problem</p>
+        {/* Chapter: the problem. A paper interlude, set close and quiet —
+            the one place the page whispers. */}
+        <section className="bg-ink py-40 text-bg">
+          <div className="mx-auto max-w-xl px-5">
             <Reveal>
-              <p className="display fluid-band leading-snug">
+              <p className="eyebrow mb-10 !text-bg/40">The problem</p>
+              <p className="display text-[1.55rem] leading-[1.5] sm:text-[1.8rem]">
                 Job searching is a full-time job you didn’t apply for. Rewriting
                 your CV for every role. Guessing what recruiters search for.
-                Walking into interviews cold. Ada does all of it — in{" "}
-                <em>one run.</em>
+                Walking into interviews cold.
+              </p>
+              <p className="display mt-10 text-[1.55rem] leading-[1.5] text-bg/60 sm:text-[1.8rem]">
+                Ada does all of it — <em className="text-bg">in one run.</em>
               </p>
             </Reveal>
           </div>
@@ -182,40 +181,91 @@ export default function Landing() {
         {/* Deliverables — pinned scroll showcase on desktop, stacked on mobile */}
         <DeliverablesShowcase />
 
-        {/* How it works — sticky editorial intro on the left, a timeline that
-            draws itself on the right */}
-        <section id="how" className="scroll-mt-24 border-y border-line bg-surface py-28">
-          <div className="mx-auto grid max-w-6xl gap-14 px-5 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="lg:sticky lg:top-28 lg:self-start">
-              <Reveal>
-                <Eyebrow>How it works</Eyebrow>
-                <h2 className="display fluid-h2">
-                  From CV to prepared, in five steps.
-                </h2>
-                <p className="mt-4 max-w-sm text-muted">
-                  Starting the run takes a minute. Everything after that is Ada
-                  working — the rail on the right is the whole process.
-                </p>
-                <Link href="/app/new" className="mt-8 inline-block">
-                  <Button className="group">
-                    Start a run
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                  </Button>
-                </Link>
-              </Reveal>
-            </div>
-            <Timeline steps={STEPS} />
+        {/* Chapter: the process, typeset as a document index — the way a
+            bureau would file it. No cards, no rail, just the ledger. */}
+        <section id="how" className="scroll-mt-24 border-y border-line bg-surface py-32">
+          <div className="mx-auto max-w-3xl px-5">
+            <Reveal>
+              <Eyebrow>How it works</Eyebrow>
+              <h2 className="display fluid-h2 mt-3">The run, in five entries.</h2>
+            </Reveal>
+            <ol className="mt-14">
+              {STEPS.map((step, i) => (
+                <Reveal key={step.title} delay={i * 0.04}>
+                  <li className="group border-t border-line py-7 last:border-b">
+                    <div className="flex items-baseline gap-6">
+                      <span className="font-mono text-xs text-muted">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="display text-xl sm:text-2xl">{step.title}</h3>
+                        <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
+                          {step.body}
+                        </p>
+                      </div>
+                    </div>
+                  </li>
+                </Reveal>
+              ))}
+            </ol>
           </div>
         </section>
 
-        {/* Pricing */}
-        <section id="pricing" className="mx-auto max-w-6xl scroll-mt-24 px-5 py-28">
-          <Reveal>
-            <Eyebrow>Pricing</Eyebrow>
-          </Reveal>
-          <Reveal delay={0.05}>
-            <PricingTiers />
-          </Reveal>
+        {/* Chapter: the tariff — a rate card, not pricing cards. */}
+        <section id="pricing" className="scroll-mt-24 py-32">
+          <div className="mx-auto max-w-2xl px-5">
+            <Reveal>
+              <Eyebrow>The tariff</Eyebrow>
+              <h2 className="display fluid-h2 mt-3">One price to start. Two ways to stay.</h2>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <dl className="mt-12">
+                {[
+                  {
+                    item: "A run",
+                    detail: "CV rewritten, matches ranked, interview scored",
+                    price: "₦2,000 · $15",
+                    seal: true,
+                  },
+                  {
+                    item: "Pro",
+                    detail: "Unlimited runs, every month",
+                    price: "₦5,000 · $5 / mo",
+                  },
+                  {
+                    item: "Premium",
+                    detail: "Everything, with Ada on call by voice",
+                    price: "₦12,000 · $12 / mo",
+                  },
+                ].map((row) => (
+                  <div key={row.item} className="border-t border-line py-6 last:border-b">
+                    <div className="flex items-baseline gap-3">
+                      <dt className="display text-xl sm:text-2xl">
+                        {row.item}
+                        {row.seal && (
+                          <span className="ml-2 inline-block size-2 rounded-full bg-accent align-middle" aria-hidden />
+                        )}
+                      </dt>
+                      <span className="mx-1 flex-1 border-b border-dotted border-line" aria-hidden />
+                      <dd className="shrink-0 font-mono text-sm text-ink">{row.price}</dd>
+                    </div>
+                    <p className="mt-1.5 text-sm text-muted">{row.detail}</p>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-6 text-xs leading-relaxed text-muted">
+                A failed run is never charged. Annual Pro and Premium are ten months
+                for the year. The seal marks where everyone starts.
+              </p>
+              <Link
+                href="/app/new"
+                className="group mt-10 inline-flex items-center gap-2.5 rounded-[10px] bg-ink px-7 py-3.5 font-medium text-bg transition-opacity hover:opacity-90"
+              >
+                Start with a run
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </Reveal>
+          </div>
         </section>
 
         {/* FAQs */}
@@ -229,12 +279,12 @@ export default function Landing() {
               {FAQS.map((faq, i) => (
                 <Reveal key={faq.q} delay={i * 0.03}>
                   <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center gap-4 text-[15px] font-medium transition-colors hover:text-accent [&::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer list-none items-center gap-4 text-[15px] font-medium transition-colors [&::-webkit-details-marker]:hidden">
                       <span className="display w-8 shrink-0 text-lg text-muted/50">
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span className="flex-1">{faq.q}</span>
-                      <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line text-lg text-muted transition-transform duration-200 group-open:rotate-45">
+                      <span className="shrink-0 font-mono text-base text-muted transition-transform duration-200 group-open:rotate-45">
                         +
                       </span>
                     </summary>
@@ -250,24 +300,21 @@ export default function Landing() {
 
         {/* CTA band */}
         <section className="relative overflow-hidden bg-ink py-32 text-center text-bg">
-          <div
-            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
-            aria-hidden
-          />
           <Reveal className="relative">
             <h2 className="display fluid-hero mx-auto max-w-3xl px-5">
-              Go in <em className="text-accent">prepared</em>.
+              Go in <em>prepared</em>.
             </h2>
             <p className="mx-auto mt-5 max-w-md px-5 text-balance text-bg/60">
               The next role is already out there. Ada gets you ready for it — whatever
               the industry.
             </p>
             <div className="mt-9">
-              <Link href="/app/new" className="inline-block">
-                <Button className="group !bg-bg !px-9 !py-4 text-base !text-ink !shadow-none hover:!opacity-90">
-                  Start your run
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-                </Button>
+              <Link
+                href="/app/new"
+                className="group inline-flex items-center gap-2.5 rounded-[10px] bg-bg px-9 py-4 text-base font-medium text-ink transition-opacity hover:opacity-90"
+              >
+                Start your run
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
             <p className="mt-6 text-xs text-bg/50">

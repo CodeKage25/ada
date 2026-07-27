@@ -54,7 +54,7 @@ export function ScrollProgress() {
   const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 28, mass: 0.4 });
   return (
     <motion.div
-      className="fixed inset-x-0 top-0 z-50 h-[2.5px] origin-left bg-accent"
+      className="fixed inset-x-0 top-0 z-50 h-px origin-left bg-ink/50"
       style={{ scaleX }}
       aria-hidden
     />
@@ -178,11 +178,9 @@ function CareerLane({ roles, reverse = false }: { roles: string[]; reverse?: boo
     <div className="relative overflow-hidden">
       <div className={`marquee-track gap-3 ${reverse ? "marquee-reverse" : ""}`}>
         {row.map((role, i) => (
-          <span
-            key={`${role}-${i}`}
-            className="shrink-0 rounded-full border border-line bg-bg px-4 py-2 text-sm text-muted"
-          >
+          <span key={`${role}-${i}`} className="shrink-0 font-mono text-sm text-muted">
             {role}
+            <span className="mx-5 text-line" aria-hidden>·</span>
           </span>
         ))}
       </div>
@@ -241,7 +239,7 @@ export function CareersBand() {
       <Reveal>
         <p className="eyebrow mb-2 text-center">For every career</p>
         <p className="display mx-auto mb-8 max-w-xl px-5 text-center text-2xl">
-          Not just tech. <em className="text-accent">Every</em> industry.
+          Not just tech. <em>Every</em> industry.
         </p>
       </Reveal>
       {/* The moving lanes are decorative; screen readers get one sentence. */}

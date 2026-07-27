@@ -272,7 +272,7 @@ export function HeroOrb() {
           onClick={toggle}
           className="inline-flex items-center gap-2.5 rounded-[10px] border border-line bg-surface/60 py-2 pl-2.5 pr-4 text-sm backdrop-blur transition-colors hover:border-accent/50"
         >
-          <span className="flex size-7 items-center justify-center rounded-[7px] bg-accent text-accent-ink">
+          <span className="flex size-7 items-center justify-center rounded-[7px] bg-ink text-bg">
             {playing ? <Pause className="size-3" /> : <Play className="ml-px size-3" />}
           </span>
           <span className="font-mono text-xs tabular-nums text-muted" aria-live="polite">
