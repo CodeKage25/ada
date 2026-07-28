@@ -84,20 +84,34 @@ async def refresh_candidate(user_id: str, profiles: ProfileRepository, runs: Run
         if run.rewritten_cv:
             cv_text = run.rewritten_cv
             break
+
+    service = InsightService()
+    insight: CandidateInsight | None = None
     try:
-        service = InsightService()
         insight = await service.analyze(profile_text=profile.profile_text, cv_text=cv_text)
-        vector = await service._search.embed(
-            service.search_text(insight, profile.profile_text, cv_text)
-        )
-    except Exception as exc:  # noqa: BLE001 — no creds / transient model error must not 500 the caller
-        log.warning("insight_refresh_skipped", user_id=user_id, error=str(exc))
+    except Exception as exc:  # noqa: BLE001 — generation blocked/absent: fall back to raw embed
+        log.warning("insight_analyze_skipped", user_id=user_id, error=str(exc))
+
+    # Embed the insight-forward text when we have it, else the raw profile/CV — so the
+    # candidate is still discoverable by Uche even when generation is unavailable.
+    embed_text = (
+        service.search_text(insight, profile.profile_text, cv_text)
+        if insight
+        else f"{profile.headline or ''}\n{cv_text or profile.profile_text}"
+    )
+    vector: list[float] | None = None
+    try:
+        vector = await service._search.embed(embed_text)
+    except Exception as exc:  # noqa: BLE001 — embeddings unavailable too: nothing to store
+        log.warning("insight_embed_skipped", user_id=user_id, error=str(exc))
+
+    if insight is None and vector is None:
         return False
     await profiles.set_analysis(
         user_id,
         embedding=vector,
-        insights=json.loads(insight.model_dump_json()),
-        headline=insight.headline,
-        location=insight.location or None,
+        insights=json.loads(insight.model_dump_json()) if insight else None,
+        headline=insight.headline if insight else None,
+        location=(insight.location or None) if insight else None,
     )
     return True

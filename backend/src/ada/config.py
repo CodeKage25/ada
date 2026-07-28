@@ -26,10 +26,15 @@ class Settings(BaseSettings):
 
     gcp_project: str = ""
     gcp_location: str = "us-central1"
+    # Google AI Studio (Gemini Developer API) key. When set, every Gemini call uses it
+    # instead of Vertex — lets the full AI stack run without GCP creds (local/demo).
+    gemini_api_key: str = Field(default="", repr=False)
     # Uploaded CV originals land here (empty = extraction only, nothing stored).
     gcs_bucket: str = ""
     vertex_model: str = "gemini-2.5-flash"
     embedding_model: str = "text-embedding-004"
+    # AI Studio embedding model (used when gemini_api_key is set); reduced to EMBED_DIM.
+    gemini_embedding_model: str = "gemini-embedding-001"
     live_model: str = "gemini-live-2.5-flash-native-audio"
     # Ada's single voice everywhere (live sessions + the landing intro asset).
     live_voice: str = "Aoede"
