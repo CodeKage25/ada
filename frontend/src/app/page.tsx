@@ -15,7 +15,7 @@ import {
 import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
 import { AdaVoiceIntro } from "@/components/marketing/voice-intro";
-import { Button, Card, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
+import { Button, Eyebrow, Logo, ThemeToggle } from "@/components/ui";
 
 const STEPS = [
   {
@@ -24,7 +24,7 @@ const STEPS = [
   },
   {
     title: "Pay once, Ada runs",
-    body: "₦2,000 or $15 unlocks the run. Paystack for Nigeria, cards for everywhere else.",
+    body: "₦2,000 or $9.99 unlocks the run. Paystack for Nigeria, cards for everywhere else.",
   },
   {
     title: "Your CV, rewritten for the role",
@@ -88,6 +88,9 @@ function Nav() {
           <a href="#faqs" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             FAQs
           </a>
+          <Link href="/hire" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
+            For employers
+          </Link>
         </nav>
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
@@ -266,7 +269,7 @@ export default function Landing() {
         {/* CTA band */}
         <section className="relative overflow-hidden bg-ink py-32 text-center text-bg">
           <div
-            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/25 blur-3xl"
+            className="absolute left-1/2 top-0 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-accent/15 blur-3xl"
             aria-hidden
           />
           <Reveal className="relative">
@@ -286,7 +289,7 @@ export default function Landing() {
               </Link>
             </Magnetic>
             <p className="mt-6 text-xs text-bg/50">
-              ₦2,000 / $15 per run · Unlimited from ₦5,000 / $5 a month · Results in
+              ₦2,000 / $9.99 per run · Unlimited from ₦5,000 / $19 a month · Results in
               minutes
             </p>
           </Reveal>
