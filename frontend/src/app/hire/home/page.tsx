@@ -4,6 +4,7 @@ import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
 import { Magnetic, Reveal, ScrollProgress } from "@/components/marketing/demo";
+import { UchePricing } from "@/components/marketing/uche-pricing";
 import { UcheVoiceIntro } from "@/components/marketing/voice-intro";
 import { Button, ThemeToggle } from "@/components/ui";
 
@@ -28,6 +29,9 @@ function Nav() {
         <nav className="flex items-center gap-1 text-sm text-muted max-sm:hidden">
           <a href="#how" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             How it works
+          </a>
+          <a href="#pricing" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
+            Pricing
           </a>
           <a
             href="https://ada.recrulus.com"
@@ -186,6 +190,8 @@ export default function UcheLanding() {
             </div>
           </div>
         </section>
+
+        <UchePricing />
 
         <section className="border-t border-line px-5 py-24">
           <div className="mx-auto max-w-3xl text-center">
