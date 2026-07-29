@@ -124,7 +124,10 @@ export function UchePricing() {
                   </li>
                 ))}
               </ul>
-              <Link href="/hire" className="mt-8 block">
+              <Link
+                href={tier.name === "Pilot" ? "/hire" : "/hire/billing"}
+                className="mt-8 block"
+              >
                 <Button
                   variant={tier.featured ? "primary" : "secondary"}
                   className="group w-full !py-3"

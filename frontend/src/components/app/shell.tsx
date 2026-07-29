@@ -3,6 +3,7 @@
 import {
   CreditCard,
   FileText,
+  Inbox,
   LayoutDashboard,
   LayoutList,
   MessageCircle,
@@ -41,6 +42,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
       { href: "/app/runs", label: "My runs", icon: LayoutList },
       { href: "/app/documents", label: "Documents", icon: FileText },
       { href: "/app/applications", label: "Applications", icon: Send },
+      { href: "/app/intros", label: "Intros", icon: Inbox },
     ],
   },
   {

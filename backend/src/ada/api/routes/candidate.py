@@ -4,13 +4,13 @@
 it on first request. `PUT /candidate/discoverable` is the opt-in that lets Uche surface
 them to employers — enabling it (re)builds the analysis + search vector.
 """
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ada.auth.dependencies import current_user
-from ada.db.models import User
-from ada.db.repositories import ProfileRepository, RunRepository
+from ada.db.models import IntroStatus, User
+from ada.db.repositories import IntroRepository, ProfileRepository, RunRepository
 from ada.db.session import get_session
 from ada.services.insights import refresh_candidate
 
@@ -19,6 +19,10 @@ router = APIRouter(prefix="/candidate", tags=["candidate"])
 
 class DiscoverableIn(BaseModel):
     discoverable: bool
+
+
+class RespondIn(BaseModel):
+    action: str  # "accept" | "decline"
 
 
 async def _refresh(user_id: str) -> None:
@@ -57,3 +61,40 @@ async def set_discoverable(
         # Make sure the analysis + vector exist so Uche can actually find them.
         background.add_task(_refresh, user.id)
     return {"discoverable": body.discoverable}
+
+
+@router.get("/intros")
+async def my_intros(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_user),
+) -> list[dict]:
+    rows = await IntroRepository(session).list_for_candidate(user.id)
+    return [
+        {
+            "id": intro.id,
+            "status": str(intro.status),
+            "message": intro.message,
+            "created_at": intro.created_at.isoformat(),
+            "role_title": job.title,
+            "company": employer.company or job.company,
+            "location": job.location,
+            "remote": job.remote,
+        }
+        for intro, job, employer in rows
+    ]
+
+
+@router.post("/intros/{intro_id}/respond")
+async def respond_intro(
+    intro_id: str,
+    body: RespondIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_user),
+) -> dict:
+    if body.action not in ("accept", "decline"):
+        raise HTTPException(422, "action must be 'accept' or 'decline'.")
+    status = IntroStatus.ACCEPTED if body.action == "accept" else IntroStatus.DECLINED
+    moved = await IntroRepository(session).respond(intro_id, user.id, status)
+    if not moved:
+        raise HTTPException(404, "Intro not found or already answered.")
+    return {"status": str(status)}
