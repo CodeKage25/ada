@@ -4,6 +4,7 @@ import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 
 import { Magnetic, Reveal, ScrollProgress } from "@/components/marketing/demo";
+import { UcheVoiceIntro } from "@/components/marketing/voice-intro";
 import { Button, ThemeToggle } from "@/components/ui";
 
 /** Uche's front door — the marketing landing served at uche.recrulus.com/.
@@ -150,6 +151,11 @@ export default function UcheLanding() {
                   >
                     Looking for a job instead? Meet Ada →
                   </a>
+                </div>
+              </Reveal>
+              <Reveal delay={0.55}>
+                <div className="mt-6">
+                  <UcheVoiceIntro />
                 </div>
               </Reveal>
             </div>
