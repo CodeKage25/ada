@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Briefcase, Send, UserRound } from "lucide-react";
+import { ArrowRight, Briefcase, CreditCard, Send, UserRound } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ export const useEmployer = () => {
 const NAV = [
   { href: "/hire", label: "Roles", icon: Briefcase, exact: true },
   { href: "/hire/intros", label: "Intros", icon: Send },
+  { href: "/hire/billing", label: "Billing", icon: CreditCard },
 ];
 
 function UcheMark() {

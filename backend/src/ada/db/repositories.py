@@ -713,3 +713,34 @@ class IntroRepository:
             Intro.employer_id == employer_id, Intro.job_id == job_id
         )
         return set((await self._s.execute(stmt)).scalars().all())
+
+    async def list_for_candidate(self, candidate_id: str) -> list[tuple[Intro, Job, User]]:
+        """Intros sent to this candidate, with the role and the employer behind each."""
+        stmt = (
+            select(Intro, Job, User)
+            .join(Job, Job.id == Intro.job_id)
+            .join(User, User.id == Intro.employer_id)
+            .where(Intro.candidate_id == candidate_id)
+            .order_by(Intro.created_at.desc())
+        )
+        rows = (await self._s.execute(stmt)).all()
+        return [(row[0], row[1], row[2]) for row in rows]
+
+    async def respond(
+        self, intro_id: str, candidate_id: str, status: IntroStatus
+    ) -> bool:
+        """Candidate accepts/declines their own intro. Only a REQUESTED intro can move,
+        and only by its candidate — returns False (→ 404) otherwise, idempotently."""
+        stmt = (
+            update(Intro)
+            .where(
+                Intro.id == intro_id,
+                Intro.candidate_id == candidate_id,
+                Intro.status == IntroStatus.REQUESTED,
+            )
+            .values(status=status)
+            .returning(Intro.id)
+        )
+        moved = (await self._s.execute(stmt)).scalar_one_or_none() is not None
+        await self._s.commit()
+        return moved
