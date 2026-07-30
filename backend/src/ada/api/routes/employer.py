@@ -22,6 +22,7 @@ from ada.db.session import get_session
 from ada.observability import log
 from ada.payments import plans as plan_catalog
 from ada.services import entitlements
+from ada.services.notify import notify
 from ada.services.search import SearchService
 from ada.services.uche import UcheService
 
@@ -140,6 +141,7 @@ async def curated_candidates(
 @router.post("/intros", status_code=201)
 async def request_intro(
     body: IntroIn,
+    background: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
     employer: User = Depends(current_employer),
 ) -> dict:
@@ -162,6 +164,15 @@ async def request_intro(
         intro_id=uuid.uuid4().hex, employer_id=employer.id, candidate_id=body.candidate_id,
         job_id=body.job_id, message=body.message,
     )
+    if created:
+        company = employer.company or job.company
+        background.add_task(
+            notify, body.candidate_id, kind="intro_request",
+            title=f"{company} wants to connect",
+            body=f"{company} is hiring for {job.title} and would like to talk. "
+                 "Open your intros to accept or decline.",
+            link="/app/intros",
+        )
     return {"intro_id": intro.id, "status": str(intro.status), "already_requested": not created}
 
 
@@ -175,6 +186,16 @@ async def my_intros(
     out = []
     for intro in intros:
         candidate = await profiles.get(intro.candidate_id)
+        accepted = str(intro.status) == "accepted"
+        # Contact is shared only once the candidate accepts — the handoff that turns
+        # an intro into a real conversation, gated by the candidate's own consent.
+        contact = None
+        if accepted:
+            user = await session.get(User, intro.candidate_id)
+            contact = {
+                "email": user.email if user else None,
+                "phone": candidate.phone if candidate else None,
+            }
         out.append({
             "id": intro.id,
             "job_id": intro.job_id,
@@ -184,6 +205,7 @@ async def my_intros(
             "status": str(intro.status),
             "message": intro.message,
             "created_at": intro.created_at.isoformat(),
+            "contact": contact,
         })
     return out
 

@@ -260,6 +260,20 @@ still land and a later credentialed run backfills vectors.
 In production this is a **Cloud Run Job on a Cloud Scheduler trigger**, never a request
 handler. `python -m ada.seed` is a dev-only fallback corpus.
 
+## Proactive digest
+
+Ada reaches out on her own — a scheduled sweep that sends each candidate their fresh
+best-fit roles across in-app + email + WhatsApp:
+
+```bash
+python -m ada.digest
+```
+
+For every candidate with a profile vector it KNNs the local jobs pool, and if there are
+matches sends a digest — throttled per candidate (`digest_cooldown_seconds`, ~weekly), so
+re-runs are no-ops. Another **Cloud Run Job on Cloud Scheduler**; reads the local jobs
+table only.
+
 ---
 
 ## Develop

@@ -75,6 +75,20 @@ function IntrosInbox() {
                     {intro.message}
                   </p>
                 )}
+                {intro.contact?.email && (
+                  <div className="mt-2.5 rounded-lg border border-success/30 bg-success-soft/40 px-3 py-2.5 text-xs">
+                    <p className="font-medium text-success">Connected — reach out directly</p>
+                    <p className="mt-1">
+                      <a
+                        href={`mailto:${intro.contact.email}`}
+                        className="text-accent underline-offset-2 hover:underline"
+                      >
+                        {intro.contact.email}
+                      </a>
+                      {intro.contact.phone && <span className="text-muted"> · {intro.contact.phone}</span>}
+                    </p>
+                  </div>
+                )}
               </Card>
             );
           })}

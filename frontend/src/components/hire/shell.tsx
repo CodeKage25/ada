@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useState } from "react";
 
+import { NotificationBell } from "@/components/notification-bell";
 import { Button, Input, Label, Spinner, ThemeToggle } from "@/components/ui";
 import { ApiError, api, type MeOut } from "@/lib/api";
 
@@ -121,6 +122,7 @@ export function EmployerShell({ children }: { children: React.ReactNode }) {
                 <span className="block truncate text-xs font-medium">{me?.company ?? me?.email}</span>
                 <span className="block text-[10px] text-muted">Hiring workspace</span>
               </span>
+              <NotificationBell />
               <ThemeToggle />
             </div>
           </div>

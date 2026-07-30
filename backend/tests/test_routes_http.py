@@ -33,6 +33,7 @@ async def _cleanup(user_id: str) -> None:
     from ada.db.session import _session_factory
 
     async with _session_factory() as s:
+        await s.execute(text("DELETE FROM notifications WHERE user_id = :u"), {"u": user_id})
         await s.execute(text("DELETE FROM intros WHERE employer_id = :u"), {"u": user_id})
         await s.execute(delete(Job).where(Job.posted_by == user_id))
         await s.execute(delete(Session).where(Session.user_id == user_id))
