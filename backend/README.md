@@ -319,3 +319,5 @@ Cloud Run via `make deploy` (repo root). Secrets from Secret Manager. Run
 `python -m ada.ingest` (Cloud Run Job) and `python -m ada.recover` (short interval).
 `validate_runtime()` refuses to boot staging/prod without a payment provider,
 `RESEND_API_KEY`, a real `FRONTEND_ORIGIN`, and non-wildcard CORS.
+
+# CI/CD: deployed automatically by .github/workflows/deploy-backend.yml on pushes to main.
