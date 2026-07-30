@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     apply_max_in_flight_per_user: int = 5
     apply_stuck_seconds: int = 300
 
+    # proactive digest (Ada's "fresh leads" outreach, scheduled)
+    digest_matches: int = 4
+    digest_cooldown_seconds: int = 6 * 24 * 3600  # ~weekly; re-runs inside this are no-ops
+
     # matching + interview
     jobs_match_k: int = 5
     interview_questions: int = 5

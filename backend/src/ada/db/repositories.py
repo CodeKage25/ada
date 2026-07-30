@@ -239,6 +239,17 @@ class ProfileRepository:
         )
         await self._s.commit()
 
+    async def list_embedded_candidates(self, *, limit: int = 500) -> list[Profile]:
+        """Candidate profiles with a search vector — the audience for the proactive
+        digest (they've engaged enough to be matchable)."""
+        stmt = (
+            select(Profile)
+            .join(User, User.id == Profile.user_id)
+            .where(Profile.embedding.is_not(None), User.account_type == "candidate")
+            .limit(limit)
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
     async def search_candidates(
         self, embedding: list[float], k: int, *, exclude: str | None = None
     ) -> list[tuple[Profile, float]]:
@@ -776,6 +787,16 @@ class NotificationRepository:
             Notification.user_id == user_id, Notification.read.is_(False)
         )
         return (await self._s.execute(stmt)).scalar_one()
+
+    async def last_of_kind(self, user_id: str, kind: str) -> datetime | None:
+        """Most recent notification of a kind — used to throttle the digest."""
+        stmt = (
+            select(Notification.created_at)
+            .where(Notification.user_id == user_id, Notification.kind == kind)
+            .order_by(Notification.created_at.desc())
+            .limit(1)
+        )
+        return (await self._s.execute(stmt)).scalar_one_or_none()
 
     async def mark_read(self, user_id: str, notification_id: str | None) -> None:
         """Mark one notification read, or all of the user's when id is None."""
