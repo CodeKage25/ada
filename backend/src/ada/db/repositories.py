@@ -21,6 +21,7 @@ from ada.db.models import (
     Intro,
     IntroStatus,
     Job,
+    Notification,
     ProcessedEvent,
     Profile,
     Run,
@@ -744,3 +745,42 @@ class IntroRepository:
         moved = (await self._s.execute(stmt)).scalar_one_or_none() is not None
         await self._s.commit()
         return moved
+
+
+class NotificationRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def add(
+        self, *, notification_id: str, user_id: str, kind: str, title: str,
+        body: str | None, link: str | None,
+    ) -> Notification:
+        n = Notification(
+            id=notification_id, user_id=user_id, kind=kind, title=title, body=body, link=link,
+        )
+        self._s.add(n)
+        await self._s.commit()
+        return n
+
+    async def list_for_user(self, user_id: str, *, limit: int = 30) -> list[Notification]:
+        stmt = (
+            select(Notification)
+            .where(Notification.user_id == user_id)
+            .order_by(Notification.created_at.desc())
+            .limit(limit)
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
+    async def unread_count(self, user_id: str) -> int:
+        stmt = select(func.count(Notification.id)).where(
+            Notification.user_id == user_id, Notification.read.is_(False)
+        )
+        return (await self._s.execute(stmt)).scalar_one()
+
+    async def mark_read(self, user_id: str, notification_id: str | None) -> None:
+        """Mark one notification read, or all of the user's when id is None."""
+        stmt = update(Notification).where(Notification.user_id == user_id)
+        if notification_id is not None:
+            stmt = stmt.where(Notification.id == notification_id)
+        await self._s.execute(stmt.values(read=True))
+        await self._s.commit()

@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     email_from: str = "Ada <auth@ada.local>"
     session_cookie: str = "ada_session"
 
+    # WhatsApp notifications via Twilio (best-effort; unset = channel skipped, logged).
+    twilio_account_sid: str = Field(default="", repr=False)
+    twilio_auth_token: str = Field(default="", repr=False)
+    twilio_whatsapp_from: str = ""  # e.g. "whatsapp:+14155238886" (Twilio sandbox)
+    frontend_base_url: str = "http://localhost:3000"  # for links inside notifications
+
     # paystack (NGN)
     paystack_base_url: str = "https://api.paystack.co"
     paystack_public_key: str = ""

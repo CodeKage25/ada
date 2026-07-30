@@ -170,6 +170,7 @@ export interface EmployerIntro {
   status: string;
   message: string | null;
   created_at: string;
+  contact: { email: string | null; phone: string | null } | null;
 }
 
 export interface CandidateIntro {
@@ -181,6 +182,21 @@ export interface CandidateIntro {
   company: string;
   location: string;
   remote: boolean;
+}
+
+export interface AppNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationsOut {
+  unread: number;
+  items: AppNotification[];
 }
 
 export interface Memory {
@@ -326,6 +342,14 @@ export const api = {
   employerIntros: () => request<EmployerIntro[]>("/api/employer/intros"),
   employerPlans: () => request<Plan[]>("/api/employer/plans"),
   employerPlan: () => request<EmployerPlan>("/api/employer/plan"),
+
+  // notifications (in-app centre; email + WhatsApp fan out server-side)
+  notifications: () => request<NotificationsOut>("/api/notifications"),
+  markNotificationsRead: (id?: string) =>
+    request<{ ok: boolean }>("/api/notifications/read", {
+      method: "POST",
+      body: JSON.stringify({ id: id ?? null }),
+    }),
 
   // runs
   createRun: (body: {
