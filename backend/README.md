@@ -276,6 +276,30 @@ table only.
 
 ---
 
+## Verification credential (the trust moat)
+
+Employers don't have to take "our AI likes this candidate" on faith — a candidate can
+earn an **evidence-backed credential** they judge independently:
+
+- **Proctored assessment** (`services/verification.py`) — role-specific questions issued
+  server-side (rubric never leaves the server); the candidate answers under observation.
+  Integrity telemetry (tab-switches, off-tab seconds, paste events) and a
+  **server-authoritative timer** (`started_at → submit`, never the client's number) gate
+  the result: any paste, excess tab-switching, or blowing the limit → `needs_review`,
+  however high the score. Passing + clean → `verified`.
+- **Anti-farming** — hitting *start* again resumes the same pending task (no fresh
+  questions), with a per-skill cooldown and a rolling attempt cap.
+- **Identity** — `identity_verified` + `identity_method` (v1 self-attestation; a KYC
+  provider such as Smile Identity slots in behind the same flag, surfaced honestly as
+  "self-attested" vs "verified" — never overstated).
+- **Grading** is Gemini-with-a-rubric, degrading to a transparent heuristic when
+  generation is unavailable; the method is recorded in the evidence so nothing is passed
+  off as more than it is.
+
+Endpoints: `POST /assessment/start` · `POST /assessment/submit` · `GET /assessment` ·
+`POST /candidate/identity/attest`. Uche's shortlist surfaces the credential (verified
+badge + score + identity), so the signal reaches employers as evidence, not opinion.
+
 ## Develop
 
 ```bash
