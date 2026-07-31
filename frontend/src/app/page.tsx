@@ -91,7 +91,7 @@ function Nav() {
           <Link href="/assess" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             Free CV check
           </Link>
-          <Link href="/hire" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
+          <Link href="/hire/home" className="rounded-full px-3 py-1.5 transition-colors hover:bg-line/40 hover:text-ink">
             For employers
           </Link>
         </nav>
@@ -141,7 +141,7 @@ export default function Landing() {
                 </p>
               </Reveal>
               <Reveal delay={0.6}>
-                <div className="mt-9 flex flex-wrap items-center gap-4">
+                <div className="mt-9 flex flex-wrap items-center gap-3">
                   <Magnetic>
                     <Link href="/app/new">
                       <Button className="group !px-8 !py-4 text-base">
@@ -150,13 +150,19 @@ export default function Landing() {
                       </Button>
                     </Link>
                   </Magnetic>
-                  <Link
-                    href="/app/voice"
-                    className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
-                  >
-                    or talk to Ada first
+                  {/* The no-signup hook — lowest-friction way in, visible on mobile too. */}
+                  <Link href="/assess">
+                    <Button variant="secondary" className="!px-6 !py-4 text-base">
+                      Check your CV free
+                    </Button>
                   </Link>
                 </div>
+                <Link
+                  href="/app/voice"
+                  className="mt-3 inline-block text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
+                >
+                  or talk to Ada first
+                </Link>
               </Reveal>
               <Reveal delay={0.65}>
                 <div className="mt-6">
