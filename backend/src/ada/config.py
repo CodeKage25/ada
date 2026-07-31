@@ -93,6 +93,13 @@ class Settings(BaseSettings):
     vapid_private_key: str = Field(default="", repr=False)
     vapid_subject: str = "mailto:ops@ada.dev"  # RFC 8292 contact for the push service
 
+    # Smile Identity KYC (real ID verification). Unset ⇒ identity falls back to
+    # self-attestation. Sandbox base URL: https://testapi.smileidentity.com
+    smile_partner_id: str = ""
+    smile_api_key: str = Field(default="", repr=False)
+    smile_base_url: str = ""  # e.g. https://api.smileidentity.com (prod) / testapi... (sandbox)
+    smile_default_country: str = "NG"
+
     frontend_base_url: str = "http://localhost:3000"  # for links inside notifications
 
     # paystack (NGN)
