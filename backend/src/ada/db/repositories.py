@@ -27,6 +27,8 @@ from ada.db.models import (
     Job,
     Notification,
     NotificationPref,
+    Outcome,
+    OutcomeStage,
     ProcessedEvent,
     Profile,
     Run,
@@ -953,3 +955,83 @@ class NotificationPrefRepository:
         ok = (await self._s.execute(stmt)).scalar_one_or_none() is not None
         await self._s.commit()
         return ok
+
+
+class OutcomeRepository:
+    """The candidate's hiring funnel — one row per role pursued, advanced through stages."""
+
+    # Stages are ordered; the funnel counts everyone who reached at least each stage.
+    _ORDER = [
+        OutcomeStage.APPLIED,
+        OutcomeStage.INTERVIEWING,
+        OutcomeStage.OFFER,
+        OutcomeStage.HIRED,
+    ]
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def seed(
+        self, *, user_id: str, job_id: int | None, company: str, role_title: str, source: str
+    ) -> None:
+        """Record that a pursuit began, if we aren't already tracking it. Never regresses
+        a stage the candidate has already advanced — insert-only, on-conflict-do-nothing."""
+        if job_id is None:  # a unique constraint on (user, NULL) won't dedupe — skip seeding
+            return
+        stmt = (
+            insert(Outcome)
+            .values(
+                id=uuid.uuid4().hex, user_id=user_id, job_id=job_id, company=company,
+                role_title=role_title, stage=OutcomeStage.APPLIED, source=source,
+            )
+            .on_conflict_do_nothing(constraint="uq_outcome_user_job")
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+
+    async def create_manual(
+        self, *, user_id: str, company: str, role_title: str, stage: OutcomeStage
+    ) -> Outcome:
+        outcome = Outcome(
+            id=uuid.uuid4().hex, user_id=user_id, job_id=None, company=company,
+            role_title=role_title, stage=stage, source="manual",
+        )
+        self._s.add(outcome)
+        await self._s.commit()
+        await self._s.refresh(outcome)
+        return outcome
+
+    async def set_stage(
+        self, *, outcome_id: str, user_id: str, stage: OutcomeStage
+    ) -> Outcome | None:
+        """Advance (or correct) a stage — scoped to the owner so one user can't touch
+        another's pipeline."""
+        stmt = (
+            update(Outcome)
+            .where(Outcome.id == outcome_id, Outcome.user_id == user_id)
+            .values(stage=stage)
+            .returning(Outcome)
+        )
+        row = (await self._s.execute(stmt)).scalar_one_or_none()
+        await self._s.commit()
+        return row
+
+    async def list_by_user(self, user_id: str, *, limit: int = 200) -> list[Outcome]:
+        stmt = (
+            select(Outcome)
+            .where(Outcome.user_id == user_id)
+            .order_by(Outcome.updated_at.desc())
+            .limit(limit)
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
+    async def funnel(self, user_id: str) -> dict[str, int]:
+        """Count of pursuits currently at each stage. 'rejected' is terminal and reported
+        separately from the forward funnel."""
+        stmt = (
+            select(Outcome.stage, func.count(Outcome.id))
+            .where(Outcome.user_id == user_id)
+            .group_by(Outcome.stage)
+        )
+        rows = (await self._s.execute(stmt)).all()
+        return {str(stage): count for stage, count in rows}

@@ -293,6 +293,22 @@ export interface ApplicationSummary {
   created_at: string;
 }
 
+export type OutcomeStage = "applied" | "interviewing" | "offer" | "hired" | "rejected";
+
+export interface Outcome {
+  id: string;
+  company: string;
+  role_title: string;
+  stage: OutcomeStage;
+  source: string;
+  updated_at: string;
+}
+
+export interface Pipeline {
+  outcomes: Outcome[];
+  funnel: Record<string, number>;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -522,6 +538,19 @@ export const api = {
       { method: "POST", body: JSON.stringify({ run_id: runId ?? null }) },
     ),
   listApplications: () => request<ApplicationSummary[]>("/api/applications"),
+
+  // outcomes (hiring funnel)
+  getPipeline: () => request<Pipeline>("/api/outcomes"),
+  addOutcome: (company: string, role_title: string, stage: OutcomeStage) =>
+    request<Outcome>("/api/outcomes", {
+      method: "POST",
+      body: JSON.stringify({ company, role_title, stage }),
+    }),
+  advanceOutcome: (id: string, stage: OutcomeStage) =>
+    request<Outcome>(`/api/outcomes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ stage }),
+    }),
   putIdentity: (fields: {
     full_name: string;
     phone: string | null;
