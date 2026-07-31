@@ -12,6 +12,7 @@ import {
   ScrubText,
   Timeline,
 } from "@/components/marketing/demo";
+import { MobileMenu } from "@/components/marketing/mobile-menu";
 import { PricingTiers } from "@/components/marketing/pricing";
 import { DeliverablesShowcase } from "@/components/marketing/showcase";
 import { AdaVoiceIntro } from "@/components/marketing/voice-intro";
@@ -96,10 +97,13 @@ function Nav() {
           </Link>
         </nav>
         <div className="flex items-center gap-1.5">
-          <ThemeToggle />
+          <span className="max-sm:hidden">
+            <ThemeToggle />
+          </span>
           <Link href="/login" className="px-2 text-sm text-muted transition-colors hover:text-ink max-sm:hidden">
             Sign in
           </Link>
+          <MobileMenu />
           <Link href="/app">
             <Button className="!py-2 text-[13px]">Open Ada</Button>
           </Link>
