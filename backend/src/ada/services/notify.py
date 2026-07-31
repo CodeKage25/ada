@@ -48,9 +48,14 @@ async def notify(
     link: str | None = None,
     email: bool = True,
     whatsapp: bool = True,
+    whatsapp_suffix: str | None = None,
 ) -> None:
     """Record an in-app notification and fan out to email/WhatsApp. Best-effort:
-    each channel is independent and its failure is logged, never propagated."""
+    each channel is independent and its failure is logged, never propagated.
+
+    `whatsapp_suffix` is appended to the WhatsApp message only — for a channel-specific
+    call to action like "Reply YES to connect" that wouldn't make sense in-app or by email.
+    """
     async with _session_factory() as session:
         await NotificationRepository(session).add(
             notification_id=uuid.uuid4().hex, user_id=user_id, kind=kind,
@@ -75,6 +80,8 @@ async def notify(
             msg = f"{title}\n\n{body or ''}".strip()
             if full_link:
                 msg += f"\n\n{full_link}"
+            if whatsapp_suffix:
+                msg += f"\n\n{whatsapp_suffix}"
             await _send_whatsapp(phone, msg)
         except Exception as exc:  # noqa: BLE001 — side channel, never blocks
             log.warning("notify_whatsapp_failed", user_id=user_id, error=str(exc))

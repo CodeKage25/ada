@@ -187,6 +187,16 @@ class ProfileRepository:
     async def get(self, user_id: str) -> Profile | None:
         return await self._s.get(Profile, user_id)
 
+    async def by_phone(self, digits: str) -> Profile | None:
+        """Find a profile by the trailing digits of its phone — used to map an inbound
+        WhatsApp `From` to the candidate, tolerant of '+', country code and formatting.
+        Empty/too-short input matches nothing."""
+        if len(digits) < 7:
+            return None
+        normalized = func.regexp_replace(Profile.phone, r"\D", "", "g")
+        stmt = select(Profile).where(normalized.like(f"%{digits}")).limit(1)
+        return (await self._s.execute(stmt)).scalar_one_or_none()
+
     async def upsert(
         self, *, user_id: str, profile_text: str, linkedin_url: str | None
     ) -> Profile:
@@ -754,6 +764,19 @@ class IntroRepository:
         )
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], row[1], row[2]) for row in rows]
+
+    async def latest_requested_for_candidate(self, candidate_id: str) -> Intro | None:
+        """The candidate's most recent still-open intro — the one a WhatsApp reply answers."""
+        stmt = (
+            select(Intro)
+            .where(
+                Intro.candidate_id == candidate_id,
+                Intro.status == IntroStatus.REQUESTED,
+            )
+            .order_by(Intro.created_at.desc())
+            .limit(1)
+        )
+        return (await self._s.execute(stmt)).scalar_one_or_none()
 
     async def respond(
         self, intro_id: str, candidate_id: str, status: IntroStatus

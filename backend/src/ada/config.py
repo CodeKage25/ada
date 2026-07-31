@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     twilio_account_sid: str = Field(default="", repr=False)
     twilio_auth_token: str = Field(default="", repr=False)
     twilio_whatsapp_from: str = ""  # e.g. "whatsapp:+14155238886" (Twilio sandbox)
+    # Reject inbound WhatsApp webhooks whose Twilio signature doesn't verify. On by
+    # default; only turn off for local testing without a signature.
+    twilio_validate_signature: bool = True
     frontend_base_url: str = "http://localhost:3000"  # for links inside notifications
 
     # paystack (NGN)

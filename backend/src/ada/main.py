@@ -24,6 +24,7 @@ from ada.api.routes import (
     verification,
     voice,
     webhooks,
+    whatsapp,
 )
 from ada.config import get_settings
 from ada.db.session import init_db
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(employer.router, prefix="/api")
     app.include_router(runs.router, prefix="/api")
     app.include_router(webhooks.router, prefix="/api")
+    app.include_router(whatsapp.router, prefix="/api")
     app.include_router(verification.router, prefix="/api")
     app.include_router(voice.router, prefix="/api")
     return app
