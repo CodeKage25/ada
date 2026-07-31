@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, Share2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { Button, Card, Input, Label, Logo, ScoreRing, Textarea, ThemeToggle } from "@/components/ui";
 import { ApiError, api, type CvAssessment } from "@/lib/api";
+import { encodeCard } from "@/lib/share";
 
 export default function AssessPage() {
   const [cv, setCv] = useState("");
@@ -13,6 +14,7 @@ export default function AssessPage() {
   const [result, setResult] = useState<CvAssessment | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [shared, setShared] = useState(false);
 
   const run = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +27,24 @@ export default function AssessPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Share the score: native share sheet where available, clipboard everywhere else.
+  const share = async () => {
+    if (!result) return;
+    const url = `${location.origin}/s/${encodeCard({ score: result.score, role: role.trim() })}`;
+    const text = `My CV scored ${result.score}/100 on Ada. Check yours free:`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "My CV readiness", text, url });
+        return;
+      }
+    } catch {
+      return; // user dismissed the share sheet
+    }
+    await navigator.clipboard.writeText(url).catch(() => {});
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
   };
 
   // Hand the CV to the paid run flow — signup picks it up and pre-fills.
@@ -91,10 +111,14 @@ export default function AssessPage() {
           <div className="mt-8 space-y-5">
             <Card className="flex items-center gap-5 p-6">
               <ScoreRing value={result.score} size={80} stroke={7} />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="eyebrow !text-[10px]">Readiness</p>
                 <p className="display mt-1 text-2xl">{result.headline}</p>
               </div>
+              <Button variant="secondary" onClick={share} className="shrink-0 !px-4 !py-2.5">
+                {shared ? <Check className="size-4" /> : <Share2 className="size-4" />}
+                {shared ? "Link copied" : "Share"}
+              </Button>
             </Card>
 
             <div>
