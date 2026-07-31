@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +31,7 @@ from ada.db.models import (
     OutcomeStage,
     ProcessedEvent,
     Profile,
+    PushSubscription,
     Run,
     RunStatus,
     Subscription,
@@ -978,6 +979,37 @@ class NotificationPrefRepository:
         ok = (await self._s.execute(stmt)).scalar_one_or_none() is not None
         await self._s.commit()
         return ok
+
+
+class PushSubscriptionRepository:
+    """Browser Web Push endpoints, one per device. Dead endpoints are pruned on send."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def upsert(self, *, user_id: str, endpoint: str, p256dh: str, auth: str) -> None:
+        """Register (or re-point) a subscription. The endpoint is the identity, so a
+        browser that re-subscribes updates its keys and owner in place."""
+        stmt = (
+            insert(PushSubscription)
+            .values(user_id=user_id, endpoint=endpoint, p256dh=p256dh, auth=auth)
+            .on_conflict_do_update(
+                index_elements=["endpoint"],
+                set_={"user_id": user_id, "p256dh": p256dh, "auth": auth},
+            )
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+
+    async def list_for_user(self, user_id: str) -> list[PushSubscription]:
+        stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
+        return list((await self._s.execute(stmt)).scalars().all())
+
+    async def delete(self, endpoint: str) -> None:
+        await self._s.execute(
+            delete(PushSubscription).where(PushSubscription.endpoint == endpoint)
+        )
+        await self._s.commit()
 
 
 class OutcomeRepository:

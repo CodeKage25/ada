@@ -16,9 +16,11 @@ from ada.db.repositories import (
     NotificationPrefRepository,
     NotificationRepository,
     ProfileRepository,
+    PushSubscriptionRepository,
 )
 from ada.db.session import _session_factory
 from ada.observability import log
+from ada.services.webpush import send_web_push
 
 _TWILIO_URL = "https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json"
 
@@ -64,6 +66,7 @@ async def notify(
         user = await session.get(User, user_id)
         profile = await ProfileRepository(session).get(user_id)
         pref = await NotificationPrefRepository(session).get_or_create(user_id)
+        subscriptions = await PushSubscriptionRepository(session).list_for_user(user_id)
 
     if user is None:
         return
@@ -85,6 +88,34 @@ async def notify(
             await _send_whatsapp(phone, msg)
         except Exception as exc:  # noqa: BLE001 — side channel, never blocks
             log.warning("notify_whatsapp_failed", user_id=user_id, error=str(exc))
+
+    await _push_all(user_id, subscriptions, title=title, body=body, link=link)
+
+
+async def _push_all(user_id: str, subscriptions: list, *, title: str, body: str | None,
+                    link: str | None) -> None:
+    """Fan a notification out to every registered browser. Best-effort per subscription;
+    endpoints the push service reports as gone (404/410) are pruned."""
+    settings = get_settings()
+    if not (settings.vapid_public_key and settings.vapid_private_key and subscriptions):
+        return
+    payload = {"title": title, "body": body or "", "link": link or "/app"}
+    dead: list[str] = []
+    for sub in subscriptions:
+        try:
+            status = await send_web_push(
+                endpoint=sub.endpoint, p256dh=sub.p256dh, auth=sub.auth,
+                payload=payload, settings=settings,
+            )
+            if status in (404, 410):
+                dead.append(sub.endpoint)
+        except Exception as exc:  # noqa: BLE001 — side channel, never blocks
+            log.warning("notify_push_failed", user_id=user_id, error=str(exc))
+    if dead:
+        async with _session_factory() as session:
+            repo = PushSubscriptionRepository(session)
+            for endpoint in dead:
+                await repo.delete(endpoint)
 
 
 async def connect_parties(

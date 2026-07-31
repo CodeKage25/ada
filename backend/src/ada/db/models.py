@@ -313,6 +313,18 @@ class Outcome(Base):
     )
 
 
+class PushSubscription(Base):
+    """A browser's Web Push endpoint + its encryption keys, so Ada can notify a closed tab.
+    One row per device/browser; deduped on the endpoint URL."""
+    __tablename__ = "push_subscriptions"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    endpoint: Mapped[str] = mapped_column(String(1024), unique=True)
+    p256dh: Mapped[str] = mapped_column(String(256))
+    auth: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class NotificationPref(Base):
     """Per-user delivery preferences + a stable unsubscribe token. Defaults to all-on;
     the in-app centre is never suppressed — these gate the email/WhatsApp side channels."""

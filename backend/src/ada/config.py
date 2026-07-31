@@ -85,6 +85,14 @@ class Settings(BaseSettings):
     # Reject inbound WhatsApp webhooks whose Twilio signature doesn't verify. On by
     # default; only turn off for local testing without a signature.
     twilio_validate_signature: bool = True
+
+    # Web Push (VAPID). Generate a P-256 keypair once (scripts/gen_vapid.py); public key
+    # is base64url of the uncompressed point, private key base64url of the 32-byte scalar.
+    # Unset = push channel skipped (no subscriptions can be created), logged.
+    vapid_public_key: str = ""
+    vapid_private_key: str = Field(default="", repr=False)
+    vapid_subject: str = "mailto:ops@ada.dev"  # RFC 8292 contact for the push service
+
     frontend_base_url: str = "http://localhost:3000"  # for links inside notifications
 
     # paystack (NGN)

@@ -1,10 +1,11 @@
 "use client";
 
-import { Loader2, Mail, MessageCircle, Sparkles } from "lucide-react";
+import { Bell, Loader2, Mail, MessageCircle, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Card } from "@/components/ui";
 import { api, type NotificationPrefs } from "@/lib/api";
+import { disablePush, enablePush, pushState, pushSupported } from "@/lib/push";
 
 const ROWS: { key: keyof NotificationPrefs; icon: React.ReactNode; label: string; hint: string }[] = [
   { key: "email", icon: <Mail className="size-4" />, label: "Email", hint: "Intros, run updates, and account emails" },
@@ -15,10 +16,27 @@ const ROWS: { key: keyof NotificationPrefs; icon: React.ReactNode; label: string
 export function NotificationPreferences() {
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [saving, setSaving] = useState<string>("");
+  const [push, setPush] = useState<boolean | null>(null); // null until known; hidden if unsupported
+  const [pushBusy, setPushBusy] = useState(false);
 
   useEffect(() => {
     api.getNotificationPrefs().then(setPrefs).catch(() => setPrefs(null));
+    if (pushSupported()) pushState().then((s) => setPush(s.enabled)).catch(() => setPush(false));
   }, []);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (push) {
+        await disablePush();
+        setPush(false);
+      } else {
+        setPush(await enablePush()); // stays false if permission denied / key unset
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const toggle = async (key: keyof NotificationPrefs) => {
     if (!prefs) return;
@@ -70,6 +88,37 @@ export function NotificationPreferences() {
             </button>
           </div>
         ))}
+
+        {push !== null && (
+          <div className="flex items-center gap-3 py-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted">
+              <Bell className="size-4" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Browser notifications</span>
+              <span className="block text-xs text-muted">
+                Push alerts to this device, even with Ada closed
+              </span>
+            </span>
+            {pushBusy && <Loader2 className="size-4 animate-spin text-muted" />}
+            <button
+              role="switch"
+              aria-checked={push}
+              aria-label="Toggle browser notifications"
+              disabled={pushBusy}
+              onClick={togglePush}
+              className={`relative h-6 w-10 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
+                push ? "bg-success" : "bg-line"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 size-5 rounded-full bg-surface shadow-sm transition-all ${
+                  push ? "left-[1.15rem]" : "left-0.5"
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </div>
     </Card>
   );

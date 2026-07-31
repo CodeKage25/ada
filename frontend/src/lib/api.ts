@@ -470,6 +470,19 @@ export const api = {
       body: JSON.stringify({ token }),
     }),
 
+  // web push
+  getVapidKey: () => request<{ key: string }>("/api/push/vapid-public-key"),
+  pushSubscribe: (sub: PushSubscriptionJSON) =>
+    request<{ status: string }>("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify(sub),
+    }),
+  pushUnsubscribe: (endpoint: string) =>
+    request<{ status: string }>("/api/push/unsubscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint }),
+    }),
+
   // runs
   createRun: (body: {
     email: string;
