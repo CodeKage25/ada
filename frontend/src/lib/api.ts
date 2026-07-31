@@ -238,6 +238,9 @@ export interface AssessmentIntegrity {
   tab_switches: number;
   blur_seconds: number;
   paste_events: number;
+  mode?: "written" | "voice_video";
+  camera_present?: boolean;
+  face_absent_seconds?: number;
 }
 
 export interface AppNotification {
@@ -421,6 +424,8 @@ export const api = {
 
   // verification credential (proctored assessment + identity attestation)
   myCredential: () => request<Credential>("/api/assessment"),
+  activeAssessment: () =>
+    request<{ active: AssessmentTask | null }>("/api/assessment/active"),
   startAssessment: (skill: string) =>
     request<AssessmentTask>("/api/assessment/start", {
       method: "POST",
@@ -430,10 +435,11 @@ export const api = {
     assessment_id: string,
     answers: string[],
     integrity: AssessmentIntegrity,
+    snapshots: string[] = [],
   ) =>
     request<AssessmentResult>("/api/assessment/submit", {
       method: "POST",
-      body: JSON.stringify({ assessment_id, answers, integrity }),
+      body: JSON.stringify({ assessment_id, answers, integrity, snapshots }),
     }),
   attestIdentity: () =>
     request<{ identity_verified: boolean; method: string }>(

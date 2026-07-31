@@ -3,6 +3,7 @@
 import { AlertTriangle, BadgeCheck, Loader2, ShieldCheck, Timer } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { LiveSession } from "@/components/app/live-session";
 import { Button, Card, Input, Label, PageHeader, Skeleton, StatusBadge } from "@/components/ui";
 import {
   ApiError,
@@ -12,10 +13,13 @@ import {
   type Credential,
 } from "@/lib/api";
 
+type Mode = "voice_video" | "written";
+const MODE_KEY = (id: string) => `ada.assess.mode.${id}`;
+
 type Phase =
   | { kind: "idle" }
   | { kind: "starting" }
-  | { kind: "active"; task: AssessmentTask }
+  | { kind: "active"; task: AssessmentTask; mode: Mode }
   | { kind: "scoring" }
   | { kind: "done"; result: AssessmentResult };
 
@@ -34,6 +38,7 @@ export default function VerifyPage() {
   const [cred, setCred] = useState<Credential | null | undefined>(undefined);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [skill, setSkill] = useState("");
+  const [mode, setMode] = useState<Mode>("voice_video");
   const [error, setError] = useState("");
 
   const reload = useCallback(() => {
@@ -41,13 +46,31 @@ export default function VerifyPage() {
   }, []);
   useEffect(reload, [reload]);
 
+  // Resume an in-flight assessment after a refresh — the server timer keeps running, so we
+  // pick up where it stands (answers are restored from local draft inside the session).
+  useEffect(() => {
+    api
+      .activeAssessment()
+      .then(({ active }) => {
+        if (!active) return;
+        const savedMode = (localStorage.getItem(MODE_KEY(active.assessment_id)) as Mode) || "voice_video";
+        setPhase((p) => (p.kind === "idle" ? { kind: "active", task: active, mode: savedMode } : p));
+      })
+      .catch(() => {});
+  }, []);
+
   const start = async () => {
     if (skill.trim().length < 2) return;
     setPhase({ kind: "starting" });
     setError("");
     try {
       const task = await api.startAssessment(skill.trim());
-      setPhase({ kind: "active", task });
+      try {
+        localStorage.setItem(MODE_KEY(task.assessment_id), mode);
+      } catch {
+        /* non-fatal */
+      }
+      setPhase({ kind: "active", task, mode });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Couldn't start the assessment.");
       setPhase({ kind: "idle" });
@@ -70,12 +93,22 @@ export default function VerifyPage() {
       {phase.kind === "done" ? (
         <ResultCard result={phase.result} onRetake={() => { setPhase({ kind: "idle" }); reload(); }} />
       ) : phase.kind === "active" ? (
-        <ProctoredSession
-          task={phase.task}
-          onScoring={() => setPhase({ kind: "scoring" })}
-          onDone={(result) => setPhase({ kind: "done", result })}
-          onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
-        />
+        phase.mode === "voice_video" ? (
+          <LiveSession
+            task={phase.task}
+            onScoring={() => setPhase({ kind: "scoring" })}
+            onDone={(result) => setPhase({ kind: "done", result })}
+            onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
+            onFallback={() => setPhase({ kind: "active", task: phase.task, mode: "written" })}
+          />
+        ) : (
+          <ProctoredSession
+            task={phase.task}
+            onScoring={() => setPhase({ kind: "scoring" })}
+            onDone={(result) => setPhase({ kind: "done", result })}
+            onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
+          />
+        )
       ) : (
         <Card className="mt-6 p-6">
           <p className="font-medium">Take a skills assessment</p>
@@ -83,6 +116,33 @@ export default function VerifyPage() {
             Name the skill or role you want verified. You&apos;ll get a few timed questions —
             no switching tabs or pasting; that&apos;s the point.
           </p>
+          <div className="mt-4">
+            <Label>How would you like to take it?</Label>
+            <div className="mt-1.5 inline-flex rounded-full border border-line p-0.5 text-xs">
+              {(
+                [
+                  { key: "voice_video", label: "Voice + camera" },
+                  { key: "written", label: "Written" },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setMode(m.key)}
+                  className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
+                    mode === m.key ? "bg-accent text-accent-ink" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-muted">
+              {mode === "voice_video"
+                ? "Ada reads each question aloud; you answer by voice with your camera on for liveness."
+                : "Type your answers. Timed and proctored, no camera."}
+            </p>
+          </div>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <div className="min-w-56 flex-1">
               <Label htmlFor="skill">Skill or role</Label>
@@ -397,8 +457,8 @@ function ResultCard({ result, onRetake }: { result: AssessmentResult; onRetake: 
       )}
       {result.verdict === "needs_review" && (
         <p className="mt-3 rounded-lg bg-warn-soft/50 px-3 py-2 text-xs text-warn">
-          Your session tripped a proctoring flag (tab-switch, paste, or over time), so the
-          score isn&apos;t certified. Retake it cleanly to earn the verified badge.
+          Your session tripped a proctoring flag (tab-switch, paste, over time, or camera off/
+          out of frame), so the score isn&apos;t certified. Retake it cleanly to earn the verified badge.
         </p>
       )}
       <Button variant="secondary" onClick={onRetake} className="mt-4 !py-2 text-xs">
