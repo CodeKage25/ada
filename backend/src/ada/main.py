@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ada.api.routes import (
     account,
     applications,
+    assess,
     auth,
     candidate,
     chat,
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health.router, prefix="/api")
+    app.include_router(assess.router, prefix="/api")
     app.include_router(auth.router, prefix="/api")
     app.include_router(profile.router, prefix="/api")
     app.include_router(documents.router, prefix="/api")

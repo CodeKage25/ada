@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     digest_matches: int = 4
     digest_cooldown_seconds: int = 6 * 24 * 3600  # ~weekly; re-runs inside this are no-ops
 
+    # free CV assessment (public top-of-funnel) — per-IP rate limit
+    assess_rate_limit: int = 5
+    assess_rate_window_seconds: int = 3600
+
     # verification credential — proctored assessment
     verify_pass_mark: int = 60
     verify_time_limit_seconds: int = 1800        # server-authoritative; over = can't certify

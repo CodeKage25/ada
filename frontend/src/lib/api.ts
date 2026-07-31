@@ -193,6 +193,18 @@ export interface CandidateIntro {
   remote: boolean;
 }
 
+export interface CvFix {
+  title: string;
+  detail: string;
+  quote: string;
+}
+
+export interface CvAssessment {
+  score: number;
+  headline: string;
+  fixes: CvFix[];
+}
+
 export interface CredentialAssessment {
   skill: string;
   score: number | null;
@@ -362,6 +374,13 @@ export const api = {
     request<{ discoverable: boolean }>("/api/candidate/discoverable", {
       method: "PUT",
       body: JSON.stringify({ discoverable }),
+    }),
+
+  // free public CV assessment (no auth)
+  assessCv: (cv_text: string, target_role: string | null) =>
+    request<CvAssessment>("/api/assess", {
+      method: "POST",
+      body: JSON.stringify({ cv_text, target_role }),
     }),
 
   // verification credential (proctored assessment + identity attestation)
