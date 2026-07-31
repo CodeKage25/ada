@@ -440,6 +440,13 @@ export const api = {
       "/api/candidate/identity/attest",
       { method: "POST" },
     ),
+  identityMethods: () =>
+    request<{ kyc_enabled: boolean; id_types: string[] }>("/api/candidate/identity/methods"),
+  verifyIdentity: (id_type: string, id_number: string, dob: string | null) =>
+    request<{ identity_verified: boolean; method: string }>(
+      "/api/candidate/identity/verify",
+      { method: "POST", body: JSON.stringify({ id_type, id_number, dob }) },
+    ),
 
   // intros an employer sent the candidate — the candidate side of the loop
   candidateIntros: () => request<CandidateIntro[]>("/api/candidate/intros"),
