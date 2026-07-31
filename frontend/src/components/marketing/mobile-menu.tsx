@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { Button, Logo, ThemeToggle } from "@/components/ui";
 
@@ -85,17 +86,23 @@ export function MobileMenu() {
         Menu
       </button>
 
-      {open && (
-        <div
-          ref={dialogRef}
-          id="mobile-menu"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu"
-          className={`fixed inset-0 z-50 flex flex-col bg-bg transition-opacity duration-200 motion-reduce:transition-none sm:hidden ${
-            entered ? "opacity-100" : "opacity-0"
-          }`}
-        >
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dialogRef}
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu"
+            // Portaled to <body> so it escapes any transformed/stacking ancestor on the
+            // landing (framer-motion Reveal/ScrollProgress). Opaque bg set inline as a
+            // belt-and-braces guarantee nothing behind can show through.
+            style={{ backgroundColor: "var(--bg)" }}
+            className={`fixed inset-0 z-[100] flex flex-col transition-opacity duration-200 motion-reduce:transition-none sm:hidden ${
+              entered ? "opacity-100" : "opacity-0"
+            }`}
+          >
           <div className="flex items-center justify-between px-6 pt-6">
             <Logo />
             <button
@@ -147,8 +154,9 @@ export function MobileMenu() {
               <Button className="!py-2.5">Open Ada</Button>
             </Link>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }
