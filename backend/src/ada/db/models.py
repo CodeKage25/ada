@@ -284,6 +284,20 @@ class Notification(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class NotificationPref(Base):
+    """Per-user delivery preferences + a stable unsubscribe token. Defaults to all-on;
+    the in-app centre is never suppressed — these gate the email/WhatsApp side channels."""
+    __tablename__ = "notification_prefs"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    email_enabled: Mapped[bool] = mapped_column(default=True)
+    whatsapp_enabled: Mapped[bool] = mapped_column(default=True)
+    digest_enabled: Mapped[bool] = mapped_column(default=True)
+    unsubscribe_token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
 class AssessmentStatus(StrEnum):
     PENDING = "pending"      # task issued, not yet submitted
     SUBMITTED = "submitted"  # answers in, awaiting scoring

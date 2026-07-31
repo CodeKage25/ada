@@ -12,7 +12,11 @@ import httpx
 from ada.auth.mailer import send_email
 from ada.config import get_settings
 from ada.db.models import User
-from ada.db.repositories import NotificationRepository, ProfileRepository
+from ada.db.repositories import (
+    NotificationPrefRepository,
+    NotificationRepository,
+    ProfileRepository,
+)
 from ada.db.session import _session_factory
 from ada.observability import log
 
@@ -54,17 +58,19 @@ async def notify(
         )
         user = await session.get(User, user_id)
         profile = await ProfileRepository(session).get(user_id)
+        pref = await NotificationPrefRepository(session).get_or_create(user_id)
 
     if user is None:
         return
     full_link = _absolute(link)
-    if email and user.email:
+    if email and pref.email_enabled and user.email:
         try:
-            await send_email(user.email, title, _email_html(title, body, full_link))
+            html = _email_html(title, body, full_link) + _unsub_footer(pref.unsubscribe_token)
+            await send_email(user.email, title, html)
         except Exception as exc:  # noqa: BLE001 — side channel, never blocks
             log.warning("notify_email_failed", user_id=user_id, error=str(exc))
     phone = (profile.phone if profile else None) or None
-    if whatsapp and phone:
+    if whatsapp and pref.whatsapp_enabled and phone:
         try:
             msg = f"{title}\n\n{body or ''}".strip()
             if full_link:
@@ -107,6 +113,16 @@ async def connect_parties(
             await send_email(to, subject, html)
         except Exception as exc:  # noqa: BLE001 — side channel, never blocks
             log.warning("connect_email_failed", to=to, error=str(exc))
+
+
+def _unsub_footer(token: str) -> str:
+    base = get_settings().frontend_base_url.rstrip("/")
+    return (
+        '<hr style="border:0;border-top:1px solid #eee;margin:24px 0 12px">'
+        f'<p style="font-size:12px;color:#999">You control these emails — '
+        f'<a href="{base}/unsubscribe?token={token}" style="color:#999">unsubscribe</a> '
+        "or manage preferences in your profile.</p>"
+    )
 
 
 def _absolute(link: str | None) -> str | None:

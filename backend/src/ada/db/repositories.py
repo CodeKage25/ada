@@ -7,6 +7,7 @@ Idempotency and exactly-once execution are enforced here as atomic SQL:
     UPDATE ... WHERE status = PAID, so concurrent workers cannot both run the same job.
 """
 import re
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -25,6 +26,7 @@ from ada.db.models import (
     IntroStatus,
     Job,
     Notification,
+    NotificationPref,
     ProcessedEvent,
     Profile,
     Run,
@@ -908,3 +910,46 @@ class AssessmentRepository:
             )
         )
         await self._s.commit()
+
+
+class NotificationPrefRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def get_or_create(self, user_id: str) -> NotificationPref:
+        pref = await self._s.get(NotificationPref, user_id)
+        if pref is None:
+            pref = NotificationPref(user_id=user_id, unsubscribe_token=uuid.uuid4().hex)
+            self._s.add(pref)
+            await self._s.commit()
+            await self._s.refresh(pref)
+        return pref
+
+    async def update(
+        self, user_id: str, *, email: bool, whatsapp: bool, digest: bool
+    ) -> NotificationPref:
+        pref = await self.get_or_create(user_id)
+        await self._s.execute(
+            update(NotificationPref)
+            .where(NotificationPref.user_id == user_id)
+            .values(email_enabled=email, whatsapp_enabled=whatsapp, digest_enabled=digest)
+        )
+        await self._s.commit()
+        pref.email_enabled, pref.whatsapp_enabled, pref.digest_enabled = email, whatsapp, digest
+        return pref
+
+    async def by_token(self, token: str) -> NotificationPref | None:
+        stmt = select(NotificationPref).where(NotificationPref.unsubscribe_token == token)
+        return (await self._s.execute(stmt)).scalar_one_or_none()
+
+    async def unsubscribe_all(self, token: str) -> bool:
+        """One-click unsubscribe from the email footer — kills every side channel."""
+        stmt = (
+            update(NotificationPref)
+            .where(NotificationPref.unsubscribe_token == token)
+            .values(email_enabled=False, whatsapp_enabled=False, digest_enabled=False)
+            .returning(NotificationPref.user_id)
+        )
+        ok = (await self._s.execute(stmt)).scalar_one_or_none() is not None
+        await self._s.commit()
+        return ok

@@ -243,6 +243,12 @@ export interface NotificationsOut {
   items: AppNotification[];
 }
 
+export interface NotificationPrefs {
+  email: boolean;
+  whatsapp: boolean;
+  digest: boolean;
+}
+
 export interface Memory {
   id: number;
   content: string;
@@ -415,6 +421,18 @@ export const api = {
     request<{ ok: boolean }>("/api/notifications/read", {
       method: "POST",
       body: JSON.stringify({ id: id ?? null }),
+    }),
+  getNotificationPrefs: () =>
+    request<NotificationPrefs>("/api/notifications/preferences"),
+  setNotificationPrefs: (prefs: NotificationPrefs) =>
+    request<NotificationPrefs>("/api/notifications/preferences", {
+      method: "PUT",
+      body: JSON.stringify(prefs),
+    }),
+  unsubscribe: (token: string) =>
+    request<{ ok: boolean }>("/api/notifications/unsubscribe", {
+      method: "POST",
+      body: JSON.stringify({ token }),
     }),
 
   // runs
