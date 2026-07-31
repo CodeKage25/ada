@@ -18,6 +18,8 @@ from ada.config import get_settings
 from ada.db.models import Assessment, AssessmentStatus, User
 from ada.db.repositories import AssessmentRepository, ProfileRepository
 from ada.db.session import get_session
+from ada.services import kyc
+from ada.services.ats import split_name
 from ada.services.verification import VerificationService, store_proctor_snapshots
 
 router = APIRouter(tags=["verification"])
@@ -186,10 +188,56 @@ async def attest_identity(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(current_user),
 ) -> dict:
-    """v1 self-attestation (candidate affirms their legal identity). A real KYC provider
-    (e.g. Smile Identity for Africa) slots in here later behind the same flag."""
+    """Self-attestation fallback (candidate affirms their legal identity) — used when KYC
+    isn't configured or a candidate has no verifiable government ID on hand."""
     profile = await ProfileRepository(session).get(user.id)
     if profile is None or not (profile.full_name or "").strip():
         raise HTTPException(428, "Add your full name before verifying your identity.")
     await ProfileRepository(session).set_identity_verified(user.id, method="attested")
     return {"identity_verified": True, "method": "attested"}
+
+
+class IdVerifyIn(BaseModel):
+    id_type: str = Field(min_length=2, max_length=32)
+    id_number: str = Field(min_length=3, max_length=64)
+    dob: str | None = Field(default=None, max_length=10)  # YYYY-MM-DD, when the ID needs it
+
+
+@router.get("/candidate/identity/methods")
+async def identity_methods() -> dict:
+    """What the identity step should offer: real KYC when configured, else attestation."""
+    return {"kyc_enabled": kyc.is_configured(), "id_types": sorted(kyc.SUPPORTED_ID_TYPES)}
+
+
+@router.post("/candidate/identity/verify")
+async def verify_identity(
+    body: IdVerifyIn,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_user),
+) -> dict:
+    """Real KYC: check a government ID against the candidate's name via Smile Identity.
+    On a match, the identity half of the credential flips to verified with the ID type
+    recorded. Falls back to attestation (503) when KYC isn't configured."""
+    profile = await ProfileRepository(session).get(user.id)
+    full_name = (profile.full_name if profile else "") or ""
+    if not full_name.strip():
+        raise HTTPException(428, "Add your full name before verifying your identity.")
+    first, last = split_name(full_name.strip())
+    try:
+        result = await kyc.verify_id(
+            id_type=body.id_type.upper(), id_number=body.id_number.strip(),
+            first_name=first, last_name=last, dob=body.dob, user_id=user.id,
+        )
+    except kyc.KycNotConfigured as exc:
+        raise HTTPException(
+            503, "ID verification isn't available yet — you can self-attest."
+        ) from exc
+    except kyc.KycError as exc:
+        raise HTTPException(502, str(exc)) from exc
+
+    if not result.verified:
+        raise HTTPException(422, result.detail)
+    await ProfileRepository(session).set_identity_verified(
+        user.id, method=f"smile:{body.id_type.lower()}"
+    )
+    return {"identity_verified": True, "method": f"smile:{body.id_type.lower()}"}
