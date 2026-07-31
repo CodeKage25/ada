@@ -7,6 +7,7 @@ duration) which the score is gated on.
 """
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -17,7 +18,7 @@ from ada.config import get_settings
 from ada.db.models import Assessment, AssessmentStatus, User
 from ada.db.repositories import AssessmentRepository, ProfileRepository
 from ada.db.session import get_session
-from ada.services.verification import VerificationService
+from ada.services.verification import VerificationService, store_proctor_snapshots
 
 router = APIRouter(tags=["verification"])
 
@@ -30,12 +31,20 @@ class Integrity(BaseModel):
     tab_switches: int = Field(default=0, ge=0)
     blur_seconds: float = Field(default=0, ge=0)
     paste_events: int = Field(default=0, ge=0)
+    # Voice + camera-monitored sessions add liveness signals. mode "written" is the
+    # keyboard fallback and ignores the camera gates.
+    mode: Literal["written", "voice_video"] = "written"
+    camera_present: bool = True
+    face_absent_seconds: float = Field(default=0, ge=0)
 
 
 class SubmitIn(BaseModel):
     assessment_id: str
     answers: list[str] = Field(max_length=20)
     integrity: Integrity = Field(default_factory=Integrity)
+    # Liveness snapshots (data URLs) from a voice+camera session — a few frames kept as
+    # proctoring evidence, never full video. Capped; oversized frames are dropped server-side.
+    snapshots: list[str] = Field(default_factory=list, max_length=8)
 
 
 def _started_at(a: Assessment) -> datetime:
@@ -108,6 +117,24 @@ async def start_assessment(
     return _task_out(assessment, time_limit=s.verify_time_limit_seconds)
 
 
+@router.get("/assessment/active")
+async def active_assessment(
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(current_user),
+) -> dict:
+    """The candidate's in-flight assessment, if any — so a refresh can resume it instead of
+    losing the session. Expired (past the time limit) counts as none; the timer is
+    server-authoritative, so `seconds_remaining` is always the truth."""
+    s = get_settings()
+    pending = await AssessmentRepository(session).active_for_user(user.id)
+    if pending is None:
+        return {"active": None}
+    elapsed = (datetime.now(UTC) - _started_at(pending)).total_seconds()
+    if elapsed >= s.verify_time_limit_seconds:
+        return {"active": None}
+    return {"active": _task_out(pending, time_limit=s.verify_time_limit_seconds)}
+
+
 @router.post("/assessment/submit")
 async def submit_assessment(
     body: SubmitIn,
@@ -129,10 +156,14 @@ async def submit_assessment(
     duration = int((datetime.now(UTC) - _started_at(assessment)).total_seconds())
     integrity = {**body.integrity.model_dump(), "over_time": duration > s.verify_time_limit_seconds}
 
+    # Persist a few liveness frames as proctoring evidence (best-effort; GCS-gated).
+    snapshot_refs = await store_proctor_snapshots(user.id, assessment.id, body.snapshots)
+
     score, verdict, evidence = await VerificationService().score(
         skill=assessment.skill, questions=assessment.questions, answers=body.answers,
         integrity=integrity, duration_seconds=duration,
     )
+    evidence["snapshots"] = {"captured": len(body.snapshots), "stored": snapshot_refs}
     await repo.record_result(
         assessment.id, answers=body.answers, integrity=integrity,
         duration_seconds=duration, score=score, verdict=verdict, evidence=evidence,

@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     verify_max_attempts: int = 3                 # per skill within the window below
     verify_attempt_window_seconds: int = 86_400  # rolling 24h attempt cap
     verify_retake_cooldown_seconds: int = 1800   # min gap between finished attempts
+    # Voice+camera sessions: face out of frame beyond this (seconds) flags for review.
+    verify_face_absent_limit_seconds: int = 25
 
     # matching + interview
     jobs_match_k: int = 5

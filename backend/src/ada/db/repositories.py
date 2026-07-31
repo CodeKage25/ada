@@ -879,6 +879,17 @@ class AssessmentRepository:
         )
         return (await self._s.execute(stmt)).scalar_one_or_none()
 
+    async def active_for_user(self, user_id: str) -> Assessment | None:
+        """The candidate's most recent in-flight assessment, any skill — lets the client
+        resume after a refresh instead of losing the session."""
+        stmt = (
+            select(Assessment)
+            .where(Assessment.user_id == user_id, Assessment.status == AssessmentStatus.PENDING)
+            .order_by(Assessment.started_at.desc())
+            .limit(1)
+        )
+        return (await self._s.execute(stmt)).scalar_one_or_none()
+
     async def pending_for(self, user_id: str, skill: str) -> Assessment | None:
         """An in-flight (unsubmitted) assessment for this skill — resumed on re-start
         so a candidate can't farm fresh questions by hitting start repeatedly."""
