@@ -664,7 +664,7 @@ export async function streamChat(
   return full;
 }
 
-/** Backend WebSocket base for the voice intake (rewrites don't proxy upgrades). */
+/** Backend WebSocket base for talking to Ada (rewrites don't proxy upgrades). */
 export function voiceWsUrl(mode?: "conversation" | "interview"): string {
   const base =
     process.env.NEXT_PUBLIC_WS_URL ??
