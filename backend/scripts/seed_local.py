@@ -13,11 +13,11 @@ from ada.db.session import _session_factory, init_db
 
 PASSWORD = "AdaLocal2026!"
 ACCOUNTS = [
-    {"email": "admin@ada.local", "type": "candidate", "company": None,
+    {"email": "admin@adalocal.io", "type": "candidate", "company": None,
      "tier": None, "label": "Admin (/admin dashboard)"},
-    {"email": "candidate@ada.local", "type": "candidate", "company": None,
+    {"email": "candidate@adalocal.io", "type": "candidate", "company": None,
      "tier": "premium", "label": "Candidate — Premium"},
-    {"email": "employer@ada.local", "type": "employer", "company": "Acme Inc",
+    {"email": "employer@adalocal.io", "type": "employer", "company": "Acme Inc",
      "tier": "scale", "label": "Employer — Scale"},
 ]
 
@@ -41,7 +41,7 @@ async def main() -> None:
                     provider="comp", provider_ref="seed:local", current_period_end=until,
                 )
             print(f"  {a['label']:26}  {a['email']:22}  {PASSWORD}")
-    print("\nAdmin access needs admin@ada.local in ADMIN_EMAILS (already set in .env).\n")
+    print("\nAdmin access needs admin@adalocal.io in ADMIN_EMAILS (already set in .env).\n")
 
 
 if __name__ == "__main__":
