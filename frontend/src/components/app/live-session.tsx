@@ -54,7 +54,7 @@ export function LiveSession({
   onError: (m: string) => void;
   onFallback: () => void; // camera denied → switch to the written version
 }) {
-  const [camera, setCamera] = useState<"requesting" | "granted" | "denied">("requesting");
+  const [camera, setCamera] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<string[]>(() => {
     try {
@@ -120,25 +120,36 @@ export function LiveSession({
     }
   }, [answers, task.assessment_id, onScoring, onDone, onError]);
 
-  // Camera + mic. Denial falls back to the written assessment.
+  // Request camera + mic — on a user gesture (button), so the browser reliably prompts
+  // and we avoid StrictMode's double-invoke racing two getUserMedia calls into a reject.
+  const requestCamera = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamera("denied"); // no API (e.g. insecure context / unsupported browser)
+      return;
+    }
+    setCamera("requesting");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 },
+        audio: true,
+      });
+      streamRef.current = stream;
+      setCamera("granted");
+    } catch {
+      setCamera("denied");
+    }
+  }, []);
+
+  // Attach the stream to the <video> once it's rendered (granted).
   useEffect(() => {
-    let cancelled = false;
-    navigator.mediaDevices
-      ?.getUserMedia({ video: { width: 640, height: 480 }, audio: true })
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-        setCamera("granted");
-      })
-      .catch(() => !cancelled && setCamera("denied"));
-    return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
+    if (camera === "granted" && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [camera]);
+
+  // Release the camera/mic when leaving the session.
+  useEffect(() => {
+    return () => streamRef.current?.getTracks().forEach((t) => t.stop());
   }, []);
 
   // Snapshots + liveness (face-absent) sampling while granted.
@@ -241,10 +252,37 @@ export function LiveSession({
     setListening(true);
   };
 
+  if (camera === "idle") {
+    return (
+      <Card className="mt-6 p-6">
+        <p className="flex items-center gap-2 text-sm font-medium">
+          <Video className="size-4 text-accent" /> Voice + camera interview
+        </p>
+        <p className="mt-2 max-w-md text-sm text-muted">
+          Ada reads each question aloud; you answer by voice (or type). Your camera stays on
+          for liveness — we keep a few snapshots, never the full video. Your browser will ask
+          for camera &amp; mic access next.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button onClick={requestCamera}>
+            <Video className="size-4" /> Enable camera &amp; mic
+          </Button>
+          <button
+            onClick={onFallback}
+            className="text-xs text-muted underline-offset-2 hover:underline"
+          >
+            or take the written version
+          </button>
+        </div>
+      </Card>
+    );
+  }
+
   if (camera === "requesting") {
     return (
       <Card className="mt-6 flex items-center gap-3 p-6 text-sm text-muted">
-        <Loader2 className="size-4 animate-spin" /> Requesting camera and microphone…
+        <Loader2 className="size-4 animate-spin" /> Waiting for camera and microphone… allow
+        access in your browser.
       </Card>
     );
   }
@@ -253,15 +291,22 @@ export function LiveSession({
     return (
       <Card className="mt-6 p-6">
         <p className="flex items-center gap-2 text-sm font-medium">
-          <Video className="size-4 text-warn" /> Camera access needed
+          <Video className="size-4 text-warn" /> Camera access blocked
         </p>
-        <p className="mt-2 text-sm text-muted">
-          The voice + camera assessment needs your camera and mic. Allow access and retry, or
-          take the written version instead.
+        <p className="mt-2 max-w-md text-sm text-muted">
+          We couldn&apos;t get your camera and mic — the browser may have blocked them, or this
+          isn&apos;t a secure (https/localhost) page. Allow access in the address bar, then try
+          again, or take the written version.
         </p>
-        <Button variant="secondary" onClick={onFallback} className="mt-3 !py-2 text-xs">
-          Take the written version
-        </Button>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button onClick={requestCamera}>Try again</Button>
+          <button
+            onClick={onFallback}
+            className="text-xs text-muted underline-offset-2 hover:underline"
+          >
+            or take the written version
+          </button>
+        </div>
       </Card>
     );
   }
