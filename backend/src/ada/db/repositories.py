@@ -23,6 +23,7 @@ from ada.db.models import (
     AssessmentStatus,
     AssessmentVerdict,
     ChatTurn,
+    CompanyProfile,
     Intro,
     IntroStatus,
     Job,
@@ -35,6 +36,8 @@ from ada.db.models import (
     PushSubscription,
     Run,
     RunStatus,
+    SavedCandidate,
+    ShortlistStage,
     Subscription,
     SubscriptionStatus,
     UploadedDocument,
@@ -294,6 +297,27 @@ class ProfileRepository:
             stmt = stmt.where(Profile.user_id != exclude)
         rows = (await self._s.execute(stmt)).all()
         return [(row[0], float(row[1])) for row in rows]
+
+    async def search_talent(
+        self, *, q: str | None, location: str | None, seniority: str | None,
+        verified_only: bool, exclude: str | None, limit: int,
+    ) -> list[Profile]:
+        """Filtered search over the discoverable pool — the employer's talent search. SQL
+        only (no embedding needed), so it works even when generation/embeddings are down."""
+        stmt = select(Profile).where(Profile.discoverable.is_(True))
+        if q:
+            like = f"%{q}%"
+            stmt = stmt.where(or_(Profile.headline.ilike(like), Profile.profile_text.ilike(like)))
+        if location:
+            stmt = stmt.where(Profile.location.ilike(f"%{location}%"))
+        if seniority:
+            stmt = stmt.where(Profile.insights["seniority"].astext == seniority)
+        if verified_only:
+            stmt = stmt.where(Profile.identity_verified.is_(True))
+        if exclude is not None:
+            stmt = stmt.where(Profile.user_id != exclude)
+        stmt = stmt.order_by(Profile.updated_at.desc()).limit(limit)
+        return list((await self._s.execute(stmt)).scalars().all())
 
 
 class JobRepository:
@@ -1296,3 +1320,114 @@ class AdminRepository:
             .values(status=SubscriptionStatus.CANCELED)
         )
         await self._s.commit()
+
+
+class CompanyRepository:
+    """An employer's company profile — one per employer user. Also read publicly for the
+    company page and to enrich intros."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def get(self, user_id: str) -> CompanyProfile | None:
+        return await self._s.get(CompanyProfile, user_id)
+
+    async def upsert(self, user_id: str, values: dict[str, Any]) -> CompanyProfile:
+        stmt = insert(CompanyProfile).values(user_id=user_id, **values)
+        stmt = stmt.on_conflict_do_update(index_elements=["user_id"], set_=values)
+        await self._s.execute(stmt)
+        await self._s.commit()
+        existing = await self._s.get(CompanyProfile, user_id)
+        if existing is None:  # unreachable after an upsert; keeps the return type honest
+            raise RuntimeError("company profile missing after upsert")
+        return existing
+
+
+class ShortlistRepository:
+    """The employer's talent pipeline — saved candidates moving through stages."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def save(
+        self, *, entry_id: str, employer_id: str, candidate_id: str,
+        job_id: int | None, note: str | None,
+    ) -> SavedCandidate:
+        """Add a candidate to the pipeline, or return the existing entry (idempotent)."""
+        stmt = (
+            insert(SavedCandidate)
+            .values(
+                id=entry_id, employer_id=employer_id, candidate_id=candidate_id,
+                job_id=job_id, note=note, stage=ShortlistStage.SHORTLISTED,
+            )
+            .on_conflict_do_nothing(constraint="uq_saved_candidate")
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+        existing = (
+            await self._s.execute(
+                select(SavedCandidate).where(
+                    SavedCandidate.employer_id == employer_id,
+                    SavedCandidate.candidate_id == candidate_id,
+                )
+            )
+        ).scalar_one()
+        return existing
+
+    async def list_for_employer(self, employer_id: str) -> list[tuple[SavedCandidate, Profile]]:
+        stmt = (
+            select(SavedCandidate, Profile)
+            .join(Profile, Profile.user_id == SavedCandidate.candidate_id)
+            .where(SavedCandidate.employer_id == employer_id)
+            .order_by(SavedCandidate.updated_at.desc())
+        )
+        rows = (await self._s.execute(stmt)).all()
+        return [(row[0], row[1]) for row in rows]
+
+    async def saved_candidate_ids(self, employer_id: str) -> set[str]:
+        stmt = select(SavedCandidate.candidate_id).where(
+            SavedCandidate.employer_id == employer_id
+        )
+        return set((await self._s.execute(stmt)).scalars().all())
+
+    async def update(
+        self, *, employer_id: str, candidate_id: str,
+        stage: ShortlistStage | None, note: str | None,
+    ) -> bool:
+        values: dict[str, Any] = {}
+        if stage is not None:
+            values["stage"] = stage
+        if note is not None:
+            values["note"] = note
+        if not values:
+            return False
+        stmt = (
+            update(SavedCandidate)
+            .where(
+                SavedCandidate.employer_id == employer_id,
+                SavedCandidate.candidate_id == candidate_id,
+            )
+            .values(**values)
+            .returning(SavedCandidate.id)
+        )
+        ok = (await self._s.execute(stmt)).scalar_one_or_none() is not None
+        await self._s.commit()
+        return ok
+
+    async def remove(self, *, employer_id: str, candidate_id: str) -> None:
+        await self._s.execute(
+            delete(SavedCandidate).where(
+                SavedCandidate.employer_id == employer_id,
+                SavedCandidate.candidate_id == candidate_id,
+            )
+        )
+        await self._s.commit()
+
+    async def funnel(self, employer_id: str) -> dict[str, int]:
+        stmt = (
+            select(SavedCandidate.stage, func.count(SavedCandidate.id))
+            .where(SavedCandidate.employer_id == employer_id)
+            .group_by(SavedCandidate.stage)
+        )
+        rows = (await self._s.execute(stmt)).all()
+        return {str(stage): count for stage, count in rows}

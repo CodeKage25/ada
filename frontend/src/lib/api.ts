@@ -193,6 +193,58 @@ export interface CandidateIntro {
   remote: boolean;
 }
 
+// ── employer console ──
+export interface CompanyProfile {
+  name: string;
+  website: string | null;
+  industry: string | null;
+  size: string | null;
+  location: string | null;
+  about: string | null;
+  logo_url: string | null;
+  contact_name: string | null;
+  contact_title: string | null;
+}
+
+export interface EmployerOverview {
+  roles: number;
+  intros_sent: number;
+  intros_accepted: number;
+  shortlist_total: number;
+  shortlist_funnel: Record<string, number>;
+  hires: number;
+  tier: string;
+}
+
+export type ShortlistStage =
+  | "shortlisted" | "contacted" | "interviewing" | "offer" | "hired" | "passed";
+
+export interface TalentCard {
+  user_id: string;
+  headline: string | null;
+  location: string | null;
+  seniority: string | null;
+  years_experience: number | null;
+  top_skills: string[];
+  compensation: string | null;
+  work_pref: string | null;
+  identity_verified: boolean;
+  saved?: boolean;
+  stage?: ShortlistStage;
+  note?: string | null;
+}
+
+export interface PublicCompany {
+  name: string;
+  website: string | null;
+  industry: string | null;
+  size: string | null;
+  location: string | null;
+  about: string | null;
+  logo_url: string | null;
+  roles: { id: number; title: string; location: string; remote: boolean }[];
+}
+
 export interface CvFix {
   title: string;
   detail: string;
@@ -549,6 +601,45 @@ export const api = {
   employerIntros: () => request<EmployerIntro[]>("/api/employer/intros"),
   employerPlans: () => request<Plan[]>("/api/employer/plans"),
   employerPlan: () => request<EmployerPlan>("/api/employer/plan"),
+
+  // employer console
+  employerOverview: () => request<EmployerOverview>("/api/employer/overview"),
+  getCompany: () => request<CompanyProfile | null>("/api/employer/company"),
+  putCompany: (body: CompanyProfile) =>
+    request<CompanyProfile>("/api/employer/company", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  publicCompany: (id: string) => request<PublicCompany>(`/api/company/${id}`),
+  searchTalent: (params: {
+    q?: string;
+    location?: string;
+    seniority?: string;
+    verified?: boolean;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set("q", params.q);
+    if (params.location) qs.set("location", params.location);
+    if (params.seniority) qs.set("seniority", params.seniority);
+    if (params.verified) qs.set("verified", "true");
+    return request<{ candidates: TalentCard[] }>(`/api/employer/candidates?${qs}`);
+  },
+  saveToShortlist: (candidate_id: string, job_id: number | null, note: string | null) =>
+    request<{ ok: boolean; stage: string }>("/api/employer/shortlist", {
+      method: "POST",
+      body: JSON.stringify({ candidate_id, job_id, note }),
+    }),
+  getShortlist: () =>
+    request<{ funnel: Record<string, number>; candidates: TalentCard[] }>(
+      "/api/employer/shortlist",
+    ),
+  updateShortlist: (candidate_id: string, stage: ShortlistStage | null, note: string | null) =>
+    request<{ ok: boolean }>(`/api/employer/shortlist/${candidate_id}`, {
+      method: "PUT",
+      body: JSON.stringify({ stage, note }),
+    }),
+  removeFromShortlist: (candidate_id: string) =>
+    request<{ ok: boolean }>(`/api/employer/shortlist/${candidate_id}`, { method: "DELETE" }),
 
   // notifications (in-app centre; email + WhatsApp fan out server-side)
   notifications: () => request<NotificationsOut>("/api/notifications"),
