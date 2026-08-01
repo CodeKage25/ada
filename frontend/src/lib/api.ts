@@ -317,6 +317,73 @@ export interface ChatMessage {
   content: string;
 }
 
+// ── admin dashboard types ──
+export interface AdminOverview {
+  users_total: number;
+  users_by_type: Record<string, number>;
+  runs_total: number;
+  runs_by_status: Record<string, number>;
+  subscriptions_active: number;
+  subscriptions_by_tier: Record<string, number>;
+  jobs_total: number;
+  jobs_embedded: number;
+  applications_total: number;
+  applications_submitted: number;
+  intros_total: number;
+  intros_accepted: number;
+  identity_verified: number;
+  assessments_verified: number;
+  revenue: { currency: string; amount_minor: number; runs: number }[];
+}
+
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  account_type: string;
+  company: string | null;
+  created_at: string;
+  subscription: { tier: string | null; status: string | null } | null;
+}
+
+export interface AdminUserDetail extends AdminUserRow {
+  is_admin: boolean;
+  entitlement: { tier: string; included_runs: boolean; can_apply: boolean; can_voice: boolean };
+  profile: {
+    full_name: string | null;
+    phone: string | null;
+    headline: string | null;
+    identity_verified: boolean;
+    discoverable: boolean;
+  } | null;
+  credential: { skill: string; score: number | null; verdict: string | null } | null;
+  counts: { runs: number; applications: number };
+}
+
+export interface AdminRun {
+  id: string;
+  user_id: string | null;
+  target_role: string;
+  status: string;
+  amount: number;
+  currency: string;
+  created_at: string;
+}
+
+export interface AdminEvent {
+  id: number;
+  provider: string;
+  reference: string;
+}
+
+export interface AdminAudit {
+  id: number;
+  admin_email: string;
+  action: string;
+  target_user_id: string | null;
+  detail: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export interface JobPeek {
   title: string;
   company: string;
@@ -623,6 +690,48 @@ export const api = {
   getProfile: () => request<Profile | null>("/api/profile"),
   putProfile: (body: { profile_text: string; linkedin_url?: string | null }) =>
     request<Profile>("/api/profile", { method: "PUT", body: JSON.stringify(body) }),
+
+  // ── admin dashboard (gated server-side by the ADMIN_EMAILS allowlist) ──
+  admin: {
+    me: () => request<{ email: string; admin: boolean }>("/api/admin/me"),
+    overview: () => request<AdminOverview>("/api/admin/overview"),
+    users: (q: string, limit = 50, offset = 0) =>
+      request<AdminUserRow[]>(
+        `/api/admin/users?q=${encodeURIComponent(q)}&limit=${limit}&offset=${offset}`,
+      ),
+    user: (id: string) => request<AdminUserDetail>(`/api/admin/users/${id}`),
+    setAccountType: (id: string, account_type: "candidate" | "employer") =>
+      request<{ ok: boolean }>(`/api/admin/users/${id}/account-type`, {
+        method: "PUT",
+        body: JSON.stringify({ account_type }),
+      }),
+    grant: (id: string, tier: string, cadence: string, days: number) =>
+      request<{ ok: boolean; tier: string; until: string }>(`/api/admin/users/${id}/subscription`, {
+        method: "POST",
+        body: JSON.stringify({ tier, cadence, days }),
+      }),
+    revoke: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/users/${id}/subscription`, { method: "DELETE" }),
+    deleteUser: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
+    impersonate: (id: string) =>
+      request<{ ok: boolean; impersonating: string }>(`/api/admin/users/${id}/impersonate`, {
+        method: "POST",
+      }),
+    runs: (status: string, limit = 50) =>
+      request<AdminRun[]>(`/api/admin/runs?status=${status}&limit=${limit}`),
+    redispatch: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/runs/${id}/redispatch`, { method: "POST" }),
+    events: (limit = 100) => request<AdminEvent[]>(`/api/admin/events?limit=${limit}`),
+    ingest: () => request<{ ok: boolean; message: string }>("/api/admin/jobs/ingest", { method: "POST" }),
+    embed: () => request<{ ok: boolean; message: string }>("/api/admin/jobs/embed", { method: "POST" }),
+    broadcast: (title: string, body: string, link: string | null, account_type: string | null) =>
+      request<{ ok: boolean; recipients: number }>("/api/admin/broadcast", {
+        method: "POST",
+        body: JSON.stringify({ title, body, link, account_type }),
+      }),
+    audit: (limit = 100) => request<AdminAudit[]>(`/api/admin/audit?limit=${limit}`),
+  },
 };
 
 /** Stream a chat completion; calls onDelta per text chunk. Returns the full reply. */

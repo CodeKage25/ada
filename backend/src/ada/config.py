@@ -85,6 +85,10 @@ class Settings(BaseSettings):
     email_from: str = "Ada <auth@ada.local>"
     session_cookie: str = "ada_session"
 
+    # Admin dashboard — comma-separated emails granted admin. Set via env/secrets only;
+    # admin is never assignable from inside the app. Empty ⇒ no admins.
+    admin_emails: str = ""
+
     # WhatsApp notifications via Twilio (best-effort; unset = channel skipped, logged).
     twilio_account_sid: str = Field(default="", repr=False)
     twilio_auth_token: str = Field(default="", repr=False)
@@ -131,6 +135,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origin.split(",") if o.strip()]
+
+    @property
+    def admin_email_set(self) -> set[str]:
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
 
     def validate_runtime(self) -> None:
         """Raise on boot if a required secret is missing outside local dev."""
