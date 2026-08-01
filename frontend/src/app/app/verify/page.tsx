@@ -3,6 +3,7 @@
 import { AlertTriangle, BadgeCheck, Loader2, ShieldCheck, Timer } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { FocusStage } from "@/components/app/focus-stage";
 import { LiveSession } from "@/components/app/live-session";
 import { Button, Card, Input, Label, PageHeader, Skeleton, StatusBadge } from "@/components/ui";
 import {
@@ -93,22 +94,27 @@ export default function VerifyPage() {
       {phase.kind === "done" ? (
         <ResultCard result={phase.result} onRetake={() => { setPhase({ kind: "idle" }); reload(); }} />
       ) : phase.kind === "active" ? (
-        phase.mode === "voice_video" ? (
-          <LiveSession
-            task={phase.task}
-            onScoring={() => setPhase({ kind: "scoring" })}
-            onDone={(result) => setPhase({ kind: "done", result })}
-            onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
-            onFallback={() => setPhase({ kind: "active", task: phase.task, mode: "written" })}
-          />
-        ) : (
-          <ProctoredSession
-            task={phase.task}
-            onScoring={() => setPhase({ kind: "scoring" })}
-            onDone={(result) => setPhase({ kind: "done", result })}
-            onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
-          />
-        )
+        <FocusStage
+          title={`Proctored assessment · ${phase.task.skill}`}
+          onExit={() => setPhase({ kind: "idle" })}
+        >
+          {phase.mode === "voice_video" ? (
+            <LiveSession
+              task={phase.task}
+              onScoring={() => setPhase({ kind: "scoring" })}
+              onDone={(result) => setPhase({ kind: "done", result })}
+              onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
+              onFallback={() => setPhase({ kind: "active", task: phase.task, mode: "written" })}
+            />
+          ) : (
+            <ProctoredSession
+              task={phase.task}
+              onScoring={() => setPhase({ kind: "scoring" })}
+              onDone={(result) => setPhase({ kind: "done", result })}
+              onError={(m) => { setError(m); setPhase({ kind: "idle" }); }}
+            />
+          )}
+        </FocusStage>
       ) : (
         <Card className="mt-6 p-6">
           <p className="font-medium">Take a skills assessment</p>
