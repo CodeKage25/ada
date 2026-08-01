@@ -374,3 +374,16 @@ class Assessment(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class AdminAudit(Base):
+    """Trail of privileged admin actions — impersonation, subscription grants, deletions —
+    for accountability. target_user_id is a plain string (not an FK) so the record survives
+    the deletion it records."""
+    __tablename__ = "admin_audit_log"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    admin_email: Mapped[str] = mapped_column(String(320), index=True)
+    action: Mapped[str] = mapped_column(String(48), index=True)
+    target_user_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    detail: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
