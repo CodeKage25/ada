@@ -30,6 +30,7 @@ from ada.db.repositories import (
 )
 from ada.db.session import _session_factory
 from ada.observability import log
+from ada.security import origin_allowed
 from ada.services import entitlements
 from ada.services.memory import MemoryService
 from ada.services.voice import Mode, VoiceIntake, format_candidate_context
@@ -93,6 +94,11 @@ async def _can_voice(user_id: str | None) -> bool:
 
 @router.websocket("/voice")
 async def voice(ws: WebSocket) -> None:
+    # Reject cross-site WebSocket hijacking before doing any work (browsers send Origin on
+    # the handshake; a missing Origin is a native/non-browser client and is allowed).
+    if not origin_allowed(ws.headers.get("origin")):
+        await ws.close(code=4403)
+        return
     await ws.accept()
     user_id, context = await _resolve_caller(ws)
     if not await _can_voice(user_id):
