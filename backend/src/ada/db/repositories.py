@@ -25,6 +25,7 @@ from ada.db.models import (
     ChatTurn,
     CompanyProfile,
     Intro,
+    IntroMessage,
     IntroStatus,
     Job,
     Notification,
@@ -1431,3 +1432,25 @@ class ShortlistRepository:
         )
         rows = (await self._s.execute(stmt)).all()
         return {str(stage): count for stage, count in rows}
+
+
+class IntroMessageRepository:
+    """The conversation thread inside an accepted intro."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    async def add(self, *, intro_id: str, sender: str, body: str) -> IntroMessage:
+        msg = IntroMessage(intro_id=intro_id, sender=sender, body=body)
+        self._s.add(msg)
+        await self._s.commit()
+        await self._s.refresh(msg)
+        return msg
+
+    async def list_for_intro(self, intro_id: str) -> list[IntroMessage]:
+        stmt = (
+            select(IntroMessage)
+            .where(IntroMessage.intro_id == intro_id)
+            .order_by(IntroMessage.id.asc())
+        )
+        return list((await self._s.execute(stmt)).scalars().all())

@@ -118,41 +118,6 @@ async def _push_all(user_id: str, subscriptions: list, *, title: str, body: str 
                 await repo.delete(endpoint)
 
 
-async def connect_parties(
-    *,
-    candidate_email: str,
-    candidate_name: str,
-    employer_email: str,
-    company: str,
-    role_title: str,
-) -> None:
-    """Once a candidate accepts, send a warm two-way introduction email to both sides —
-    the handoff that turns an accepted intro into an actual conversation. Best-effort;
-    each side is independent and failures are logged, not raised."""
-    to_candidate = (
-        f"<p>Good news — you accepted <strong>{company}</strong>'s intro for "
-        f"<strong>{role_title}</strong>.</p>"
-        f"<p>You can reach them directly at <a href=\"mailto:{employer_email}\">"
-        f"{employer_email}</a>. Just reply to say hello — they're expecting you.</p>"
-        "<p>— Ada</p>"
-    )
-    to_employer = (
-        f"<p><strong>{candidate_name}</strong> accepted your intro for "
-        f"<strong>{role_title}</strong>.</p>"
-        f"<p>Reach them at <a href=\"mailto:{candidate_email}\">{candidate_email}</a>. "
-        "They've opted in and are happy to talk.</p>"
-        "<p>— Uche</p>"
-    )
-    for to, subject, html in (
-        (candidate_email, f"You're connected with {company}", to_candidate),
-        (employer_email, f"{candidate_name} is ready to talk", to_employer),
-    ):
-        try:
-            await send_email(to, subject, html)
-        except Exception as exc:  # noqa: BLE001 — side channel, never blocks
-            log.warning("connect_email_failed", to=to, error=str(exc))
-
-
 def _unsub_footer(token: str) -> str:
     base = get_settings().frontend_base_url.rstrip("/")
     return (
