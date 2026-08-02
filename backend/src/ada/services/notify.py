@@ -5,6 +5,7 @@ centre. Email (Resend) and WhatsApp (Twilio) are side channels: each is attempte
 when configured and never blocks or fails the caller — a dead channel is logged, not
 raised. Notifications are always dispatched in the background off the request path.
 """
+import html
 import uuid
 
 import httpx
@@ -115,7 +116,7 @@ async def _push_all(user_id: str, subscriptions: list, *, title: str, body: str 
         async with _session_factory() as session:
             repo = PushSubscriptionRepository(session)
             for endpoint in dead:
-                await repo.delete(endpoint)
+                await repo.delete(user_id=user_id, endpoint=endpoint)
 
 
 def _unsub_footer(token: str) -> str:
@@ -136,10 +137,24 @@ def _absolute(link: str | None) -> str | None:
     return get_settings().frontend_base_url.rstrip("/") + link
 
 
+def _safe_href(link: str | None) -> str | None:
+    """Only http(s) or app-relative links may become an href — drops javascript:, data:,
+    and other schemes that could smuggle script or spoof through email."""
+    if not link:
+        return None
+    lowered = link.lower()
+    if lowered.startswith(("https://", "http://")) or link.startswith("/"):
+        return link
+    return None
+
+
 def _email_html(title: str, body: str | None, link: str | None) -> str:
-    parts = [f"<p><strong>{title}</strong></p>"]
+    # title/body can carry user- or admin-derived text (e.g. broadcasts), so escape them;
+    # the href is scheme-validated and attribute-escaped.
+    parts = [f"<p><strong>{html.escape(title)}</strong></p>"]
     if body:
-        parts.append(f"<p>{body}</p>")
-    if link:
-        parts.append(f'<p><a href="{link}">Open in Ada</a></p>')
+        parts.append(f"<p>{html.escape(body)}</p>")
+    href = _safe_href(link)
+    if href:
+        parts.append(f'<p><a href="{html.escape(href, quote=True)}">Open in Ada</a></p>')
     return "".join(parts)

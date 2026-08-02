@@ -1042,9 +1042,12 @@ class PushSubscriptionRepository:
         stmt = select(PushSubscription).where(PushSubscription.user_id == user_id)
         return list((await self._s.execute(stmt)).scalars().all())
 
-    async def delete(self, endpoint: str) -> None:
+    async def delete(self, *, user_id: str, endpoint: str) -> None:
         await self._s.execute(
-            delete(PushSubscription).where(PushSubscription.endpoint == endpoint)
+            delete(PushSubscription).where(
+                PushSubscription.user_id == user_id,
+                PushSubscription.endpoint == endpoint,
+            )
         )
         await self._s.commit()
 
