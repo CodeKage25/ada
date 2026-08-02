@@ -28,3 +28,25 @@ def test_password_rejects_over_72_utf8_bytes():
         _bcrypt_safe("a" * 73)                          # one over
     with pytest.raises(ValueError):
         _bcrypt_safe("😀" * 20)                          # 80 bytes of multibyte
+
+
+def test_origin_allowed_enforces_allowlist_but_permits_native(monkeypatch):
+    from ada import security
+
+    class _Prod:
+        cors_origins = ["https://ada.africa"]
+        frontend_origin = "https://app.ada.africa"
+
+    monkeypatch.setattr(security, "get_settings", lambda: _Prod())
+    assert security.origin_allowed(None) is True             # native / no Origin
+    assert security.origin_allowed("null") is True            # opaque origin
+    assert security.origin_allowed("https://ada.africa") is True
+    assert security.origin_allowed("https://app.ada.africa/") is True  # trailing slash ok
+    assert security.origin_allowed("https://evil.example") is False
+
+    class _Dev:
+        cors_origins = ["*"]
+        frontend_origin = "http://localhost:3000"
+
+    monkeypatch.setattr(security, "get_settings", lambda: _Dev())
+    assert security.origin_allowed("https://anything.example") is True  # wildcard dev

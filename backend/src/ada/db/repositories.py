@@ -1043,6 +1043,7 @@ class PushSubscriptionRepository:
         return list((await self._s.execute(stmt)).scalars().all())
 
     async def delete(self, *, user_id: str, endpoint: str) -> None:
+        # Scoped to the owner (audit #2): knowing an endpoint isn't enough to unsubscribe it.
         await self._s.execute(
             delete(PushSubscription).where(
                 PushSubscription.user_id == user_id,
