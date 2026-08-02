@@ -84,6 +84,10 @@ class Settings(BaseSettings):
     resend_api_key: str = Field(default="", repr=False)
     email_from: str = "Ada <auth@ada.local>"
     session_cookie: str = "ada_session"
+    # Sliding session window: a session (and its cookie) lasts this long, refreshed on
+    # activity — so an active user stays in, but an idle one is signed out after this many
+    # idle days. Not a fixed-forever cookie.
+    session_ttl_days: int = 14
 
     # Admin dashboard — comma-separated emails granted admin. Set via env/secrets only;
     # admin is never assignable from inside the app. Empty ⇒ no admins.
