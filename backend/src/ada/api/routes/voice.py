@@ -144,10 +144,14 @@ async def voice(ws: WebSocket) -> None:
                     if sc.output_transcription and sc.output_transcription.text:
                         await relay("Ada", sc.output_transcription.text)
 
+            def user_turn(text: str) -> types.Content:
+                # The SDK no longer coerces plain strings into LiveClientContent.
+                return types.Content(role="user", parts=[types.Part(text=text)])
+
             out_task = asyncio.create_task(pump_out())
             # Ada opens the call herself — grounded in context when the caller is known.
             await session.send_client_content(
-                turns="The candidate just joined the call. Greet them and begin.",
+                turns=user_turn("The candidate just joined the call. Greet them and begin."),
                 turn_complete=True,
             )
             while True:
@@ -159,7 +163,9 @@ async def voice(ws: WebSocket) -> None:
                         media=types.Blob(data=pcm, mime_type="audio/pcm;rate=16000")
                     )
                 elif kind == "text":
-                    await session.send_client_content(turns=msg["data"], turn_complete=True)
+                    await session.send_client_content(
+                        turns=user_turn(msg["data"]), turn_complete=True
+                    )
                 elif kind == "end":
                     break
             out_task.cancel()
