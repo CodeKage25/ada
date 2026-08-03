@@ -86,6 +86,8 @@ class Settings(BaseSettings):
     stuck_run_seconds: int = 300
     # A run still RUNNING past this had its worker die mid-execution — reclaim it.
     stuck_running_seconds: int = 1800
+    # In-app recovery poller cadence; 0 disables it (e.g. when an external cron owns it).
+    sweep_interval_seconds: int = 120
 
     # auth (email + password; email used for password-reset links)
     frontend_origin: str = "http://localhost:3000"

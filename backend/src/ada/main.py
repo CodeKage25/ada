@@ -1,4 +1,5 @@
 """FastAPI app factory. API-only service; the Next.js frontend lives in frontend/."""
+import asyncio
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
@@ -33,10 +34,21 @@ from ada.api.routes import (
 )
 from ada.config import get_settings
 from ada.db.session import init_db
-from ada.observability import configure_logging
+from ada.observability import configure_logging, log
 from ada.security import origin_allowed
 
 _UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+async def _sweep_loop(interval: int) -> None:
+    from ada.services.runs import sweep_once
+
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            await sweep_once()
+        except Exception as exc:  # noqa: BLE001 — the poller must survive any sweep error
+            log.warning("sweep_failed", error=str(exc))
 
 
 @asynccontextmanager
@@ -47,7 +59,12 @@ async def lifespan(app: FastAPI):
     if settings.app_env == "local":
         # Dev convenience only. Staging/prod schema is owned by Alembic (`make migrate`).
         await init_db()
+    sweeper = None
+    if settings.sweep_interval_seconds > 0:
+        sweeper = asyncio.create_task(_sweep_loop(settings.sweep_interval_seconds))
     yield
+    if sweeper is not None:
+        sweeper.cancel()
 
 
 def create_app() -> FastAPI:

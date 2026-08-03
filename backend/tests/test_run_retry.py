@@ -92,3 +92,25 @@ async def test_permanent_failure_fails_immediately_with_reason():
         async with _session_factory() as s:
             await s.execute(delete(Run).where(Run.id == rid))
             await s.commit()
+
+
+async def test_sweep_once_runs_both_recoveries(monkeypatch):
+    """The in-app poller's unit of work: one pass re-dispatches lost runs and flags
+    lost applications, so durability doesn't depend on an external cron being wired."""
+    from ada.services import apply as apply_mod
+    from ada.services import runs as runs_mod
+
+    calls: list[str] = []
+
+    async def fake_runs() -> int:
+        calls.append("runs")
+        return 2
+
+    async def fake_apps() -> int:
+        calls.append("apps")
+        return 1
+
+    monkeypatch.setattr(runs_mod, "recover_stuck_runs", fake_runs)
+    monkeypatch.setattr(apply_mod, "recover_stuck_applications", fake_apps)
+    assert await runs_mod.sweep_once() == (2, 1)
+    assert calls == ["runs", "apps"]
