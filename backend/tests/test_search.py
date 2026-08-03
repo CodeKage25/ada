@@ -3,18 +3,27 @@ from ada.services.search import SearchService
 
 
 class _FakeJob:
-    def __init__(self, title: str, company: str, location: str) -> None:
+    def __init__(self, title: str, company: str, location: str, job_id: int = 1) -> None:
         self.title, self.company, self.location = title, company, location
-        self.id = 1
-        self.url = "https://example.com/job/1"
+        self.id = job_id
+        self.url = f"https://example.com/job/{job_id}"
 
 
 class _FakeJobs:
-    def __init__(self, rows) -> None:
+    def __init__(self, rows, *, embedded=10_000, keyword_jobs=None) -> None:
         self._rows = rows
+        self._embedded = embedded
+        self._keyword_jobs = keyword_jobs or []
 
     async def knn(self, vector, k):
         return self._rows[:k]
+
+    async def embedded_count(self):
+        return self._embedded
+
+    async def by_keywords(self, role, k, *, exclude_ids=None):
+        exclude = exclude_ids or set()
+        return [j for j in self._keyword_jobs if j.id not in exclude][:k]
 
 
 def test_fit_label_bands():
@@ -42,3 +51,55 @@ async def test_match_shapes_and_scores(monkeypatch):
     assert out[0]["match"] == 90  # (1 - 0.10) * 100
     assert out[1]["match"] == 50
     assert out[0]["company"] == "Paystack" and "reason" in out[0]
+
+
+async def test_match_skips_sparse_vector_index_and_uses_keywords(monkeypatch):
+    """Below the coverage floor, KNN over a near-empty index is noise — keywords win."""
+    monkeypatch.setattr(search, "vertex_client", lambda: object())
+    svc = SearchService()
+
+    async def boom(_):
+        raise AssertionError("embed must not be called when coverage is too low")
+
+    svc.embed = boom  # type: ignore[method-assign]
+    jobs = _FakeJobs(
+        [(_FakeJob("Wrong Nearest Neighbour", "X", "Y", 9), 0.1)],
+        embedded=49,
+        keyword_jobs=[_FakeJob("QA Engineer", "Acme", "Lagos", 2)],
+    )
+    out = await svc.match(jobs=jobs, target_role="QA Engineer", cv_text="cv", k=5)
+    assert [m["title"] for m in out] == ["QA Engineer"]
+    assert out[0]["match"] is None
+    assert "keyword" in out[0]["reason"].lower()
+
+
+async def test_match_degrades_to_keywords_when_embedding_unavailable(monkeypatch):
+    """A 429/quota failure on the embed call must not fail the run — keywords instead."""
+    monkeypatch.setattr(search, "vertex_client", lambda: object())
+    svc = SearchService()
+
+    async def quota(_):
+        raise RuntimeError("429 RESOURCE_EXHAUSTED")
+
+    svc.embed = quota  # type: ignore[method-assign]
+    jobs = _FakeJobs([], keyword_jobs=[_FakeJob("Backend Engineer", "Acme", "Lagos", 3)])
+    out = await svc.match(jobs=jobs, target_role="Backend Engineer", cv_text="cv", k=5)
+    assert [m["title"] for m in out] == ["Backend Engineer"]
+
+
+async def test_match_tops_up_vector_results_with_keywords_deduped(monkeypatch):
+    """Thin vector results are topped up by keywords, never duplicating a job."""
+    monkeypatch.setattr(search, "vertex_client", lambda: object())
+    svc = SearchService()
+
+    async def fake_embed(_):
+        return [0.0] * 768
+
+    svc.embed = fake_embed  # type: ignore[method-assign]
+    vector_hit = _FakeJob("Backend Engineer", "Paystack", "Lagos", 1)
+    jobs = _FakeJobs(
+        [(vector_hit, 0.10)],
+        keyword_jobs=[vector_hit, _FakeJob("Platform Engineer", "Jumia", "Remote", 2)],
+    )
+    out = await svc.match(jobs=jobs, target_role="Engineer", cv_text="cv", k=3)
+    assert [m["job_id"] for m in out] == [1, 2]

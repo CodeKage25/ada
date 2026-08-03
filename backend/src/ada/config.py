@@ -77,10 +77,15 @@ class Settings(BaseSettings):
     guest_run_ttl_days: int = 7
 
     # matching + interview
-    jobs_match_k: int = 5
+    jobs_match_k: int = 20
+    # Below this many embedded jobs the vector index is too sparse to be meaningful,
+    # so matching falls back to role keywords.
+    min_embedded_for_vector: int = 500
     interview_questions: int = 5
     # Runs stuck in PAID longer than this had their in-process dispatch lost — recover them.
     stuck_run_seconds: int = 300
+    # A run still RUNNING past this had its worker die mid-execution — reclaim it.
+    stuck_running_seconds: int = 1800
 
     # auth (email + password; email used for password-reset links)
     frontend_origin: str = "http://localhost:3000"

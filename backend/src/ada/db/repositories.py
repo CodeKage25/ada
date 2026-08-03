@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import case, delete, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,7 +57,7 @@ def role_keywords(role: str) -> list[str]:
     six. Tokens are letters-only by construction, so they are safe to embed in
     ILIKE patterns without escaping.
     """
-    words = re.findall(r"[a-zA-Z]{3,}", role.lower())
+    words = re.findall(r"[a-zA-Z]{2,}", role.lower())
     seen: list[str] = []
     for w in words:
         if w not in _ROLE_STOPWORDS and w not in seen:
@@ -161,8 +161,52 @@ class RunRepository:
         stmt = select(Run.id).where(Run.status == RunStatus.PAID, Run.created_at < cutoff)
         return list((await self._s.execute(stmt)).scalars().all())
 
+    async def reclaim_stale_running(self, older_than_seconds: int) -> int:
+        """Requeue runs abandoned mid-execution (worker died holding RUNNING) back to
+        PAID so the sweep re-dispatches them. Returns how many were reclaimed."""
+        cutoff = datetime.now(UTC) - timedelta(seconds=older_than_seconds)
+        stmt = (
+            update(Run)
+            .where(Run.status == RunStatus.RUNNING, Run.created_at < cutoff)
+            .values(status=RunStatus.PAID, attempts=Run.attempts + 1, stage=None)
+            .returning(Run.id)
+        )
+        reclaimed = list((await self._s.execute(stmt)).scalars().all())
+        await self._s.commit()
+        return len(reclaimed)
+
     async def set_status(self, run: Run, status: RunStatus) -> None:
         run.status = status
+        await self._s.commit()
+
+    async def attempts_for(self, run_id: str) -> int:
+        stmt = select(Run.attempts).where(Run.id == run_id)
+        return int((await self._s.execute(stmt)).scalar_one_or_none() or 0)
+
+    async def requeue_after_transient_failure(self, run_id: str, reason: str) -> int:
+        """Return a run to PAID so the recovery sweep re-dispatches it. Returns the new
+        attempt count."""
+        stmt = (
+            update(Run)
+            .where(Run.id == run_id)
+            .values(
+                status=RunStatus.PAID,
+                attempts=Run.attempts + 1,
+                failure_reason=reason,
+                stage=None,
+            )
+            .returning(Run.attempts)
+        )
+        attempts = (await self._s.execute(stmt)).scalar_one()
+        await self._s.commit()
+        return int(attempts)
+
+    async def mark_failed(self, run_id: str, reason: str) -> None:
+        await self._s.execute(
+            update(Run)
+            .where(Run.id == run_id)
+            .values(status=RunStatus.FAILED, attempts=Run.attempts + 1, failure_reason=reason)
+        )
         await self._s.commit()
 
     async def set_stage(self, run_id: str, stage: str) -> None:
@@ -410,6 +454,30 @@ class JobRepository:
         for job_id, vector in pairs:
             await self._s.execute(update(Job).where(Job.id == job_id).values(embedding=vector))
         await self._s.commit()
+
+    async def embedded_count(self) -> int:
+        stmt = select(func.count(Job.id)).where(Job.embedding.is_not(None))
+        return int((await self._s.execute(stmt)).scalar_one())
+
+    async def by_keywords(
+        self, role: str, k: int, *, exclude_ids: set[int] | None = None
+    ) -> list[Job]:
+        """Keyword lookup over titles, newest first. The fallback when a job has no
+        embedding yet, so matching still works before the vector backfill completes."""
+        keywords = role_keywords(role)
+        if not keywords:
+            return []
+        hits = sum(
+            (case((Job.title.ilike(f"%{kw}%"), 1), else_=0) for kw in keywords),
+            literal(0),
+        )
+        stmt = select(Job).where(or_(*(Job.title.ilike(f"%{kw}%") for kw in keywords)))
+        if exclude_ids:
+            stmt = stmt.where(Job.id.notin_(exclude_ids))
+        stmt = stmt.order_by(
+            hits.desc(), Job.posted_at.desc().nullslast(), Job.id.desc()
+        ).limit(k)
+        return list((await self._s.execute(stmt)).scalars().all())
 
     async def knn(self, embedding: list[float], k: int) -> list[tuple[Job, float]]:
         """Nearest embedded jobs by cosine distance. Returns (job, distance), closest first."""

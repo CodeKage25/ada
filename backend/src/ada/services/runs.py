@@ -6,10 +6,11 @@ whose in-process enqueue was lost (e.g. process crash).
 """
 import uuid
 
-from ada.db.models import Run, RunStatus
+from ada.db.models import Run
 from ada.db.repositories import RunRepository
 from ada.db.session import _session_factory
 from ada.observability import emit_run_log, log
+from ada.resilience import is_transient
 from ada.services.graph import build_graph
 
 
@@ -54,9 +55,46 @@ async def execute_run(run_id: str) -> None:
                          "and interview questions are in.",
                     link=f"/app/runs/{run_id}",
                 )
-        except Exception as exc:  # noqa: BLE001
-            await runs.set_status(run, RunStatus.FAILED)
-            emit_run_log(run_id=run_id, step="run", status="error", error=repr(exc))
+        except Exception as exc:  # noqa: BLE001 — classify, then requeue or fail
+            await _handle_run_failure(runs, run_id, exc)
+
+
+MAX_RUN_ATTEMPTS = 5
+
+_QUOTA_REASON = (
+    "Ada's AI is at capacity right now — your run is queued and will finish automatically."
+)
+_GENERIC_RETRY_REASON = "A temporary problem interrupted this run — it will retry shortly."
+_PERMANENT_REASON = "This run couldn't be completed. Our team has been alerted."
+
+
+async def _handle_run_failure(runs: RunRepository, run_id: str, exc: Exception) -> None:
+    """Requeue a run that failed for a transient reason; fail it permanently otherwise.
+
+    A requeued run returns to PAID, so the existing recovery sweep re-dispatches it —
+    a quota outage delays a run instead of destroying it.
+    """
+    transient = is_transient(exc)
+    attempts = await runs.attempts_for(run_id)
+    if transient and attempts + 1 < MAX_RUN_ATTEMPTS:
+        reason = _QUOTA_REASON if _is_quota(exc) else _GENERIC_RETRY_REASON
+        await runs.requeue_after_transient_failure(run_id, reason)
+        emit_run_log(run_id=run_id, step="run", status="requeued", error=repr(exc))
+        return
+    reason = _QUOTA_REASON if transient else _PERMANENT_REASON
+    await runs.mark_failed(run_id, reason)
+    emit_run_log(run_id=run_id, step="run", status="error", error=repr(exc))
+
+
+def _is_quota(exc: BaseException) -> bool:
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if getattr(current, "code", None) == 429 or "RESOURCE_EXHAUSTED" in str(current):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 async def recover_stuck_runs() -> int:
@@ -67,8 +105,13 @@ async def recover_stuck_runs() -> int:
     """
     from ada.config import get_settings
 
+    s = get_settings()
     async with _session_factory() as session:
-        stuck = await RunRepository(session).find_stuck(get_settings().stuck_run_seconds)
+        runs = RunRepository(session)
+        reclaimed = await runs.reclaim_stale_running(s.stuck_running_seconds)
+        if reclaimed:
+            log.info("reclaimed_stale_running_runs", count=reclaimed)
+        stuck = await runs.find_stuck(s.stuck_run_seconds)
     for run_id in stuck:
         log.info("recover_stuck_run", run_id=run_id)
         await execute_run(run_id)

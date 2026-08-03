@@ -9,6 +9,7 @@ from google.genai import types
 from ada.config import get_settings
 from ada.db.models import EMBED_DIM, Job
 from ada.db.repositories import JobRepository
+from ada.observability import log
 from ada.resilience import retry_async
 from ada.vertex import vertex_client
 
@@ -60,10 +61,42 @@ class SearchService:
     async def match(
         self, *, jobs: JobRepository, target_role: str, cv_text: str, k: int = 5
     ) -> list[dict]:
-        query = f"{target_role}\n\n{cv_text}"
-        vector = await self.embed(query)
-        rows = await jobs.knn(vector, k)
-        return [self._to_match(job, distance) for job, distance in rows]
+        """Semantic matches when the vector index is trustworthy, keyword matches otherwise.
+
+        KNN over a sparsely embedded corpus returns confident-looking nonsense — the
+        nearest neighbour of a QA engineer among 49 vectors may be a sales manager. Below
+        the coverage floor, or when embedding is unavailable (quota), role keywords are the
+        honest signal. Coverage rises as the backfill runs, so this self-heals.
+        """
+        matches: list[dict] = []
+        embedded = await jobs.embedded_count()
+        if embedded >= get_settings().min_embedded_for_vector:
+            try:
+                vector = await self.embed(f"{target_role}\n\n{cv_text}")
+                rows = await jobs.knn(vector, k)
+                matches = [self._to_match(job, distance) for job, distance in rows]
+            except Exception as exc:  # noqa: BLE001 — degrade to keywords, never fail the run
+                log.warning("match_embedding_unavailable", error=str(exc))
+        else:
+            log.info("match_vector_skipped_low_coverage", embedded=embedded)
+
+        if len(matches) < k:
+            seen = {m["job_id"] for m in matches}
+            extra = await jobs.by_keywords(target_role, k - len(matches), exclude_ids=seen)
+            matches.extend(self._keyword_match(job) for job in extra)
+        return matches
+
+    @staticmethod
+    def _keyword_match(job: Job) -> dict:
+        return {
+            "job_id": job.id,
+            "title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "url": job.url,
+            "match": None,
+            "reason": "Matched on role keywords",
+        }
 
     @staticmethod
     def _to_match(job: Job, distance: float) -> dict:

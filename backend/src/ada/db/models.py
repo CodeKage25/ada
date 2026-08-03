@@ -75,6 +75,8 @@ class Run(Base):
     # "job_match", "interview_prep"); cleared on completion, kept on failure as a
     # diagnostic of where the run died.
     stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    failure_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

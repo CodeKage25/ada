@@ -11,10 +11,13 @@ def test_role_keywords_extracts_meaningful_tokens():
     assert role_keywords("Senior Sales Manager") == ["senior", "sales", "manager"]
 
 
-def test_role_keywords_drops_stopwords_short_tokens_and_dupes():
-    assert role_keywords("Head of the QA") == ["head"]
+def test_role_keywords_keeps_two_letter_acronyms_drops_stopwords_and_dupes():
+    # QA/UX/BI/PM are real role tokens; dropping them made "QA Engineer" match any engineer.
+    assert role_keywords("Head of the QA") == ["head", "qa"]
+    assert role_keywords("UX Designer") == ["ux", "designer"]
     assert role_keywords("sales & Sales!") == ["sales"]
     assert role_keywords("of the a to") == []
+    assert role_keywords("a b c") == []
 
 
 def test_role_keywords_caps_token_count():
