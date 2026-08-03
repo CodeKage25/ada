@@ -125,3 +125,22 @@ async def test_assessment_repo_lifecycle_and_antifarm():
             await s.execute(delete(User).where(User.id == uid))
             await s.commit()
         raise
+
+
+def test_identity_levels_map_deterministically():
+    """The write-path mapping and the migration backfill must agree on these."""
+    from ada.services.identity import independently_verified, label, level_from_method
+
+    assert level_from_method(None) == "unverified"
+    assert level_from_method("attested") == "self_attested"
+    assert level_from_method("smile:nin") == "government_id_verified"
+    assert level_from_method("smile:passport") == "government_id_verified"
+    assert level_from_method("garbage") == "unverified"
+
+    assert independently_verified("government_id_verified") is True
+    assert independently_verified("self_attested") is False   # attestation never passes
+    assert independently_verified(None) is False
+
+    assert label("government_id_verified") == "Government ID verified"
+    assert label("self_attested") == "Self-attested"
+    assert label(None) == "Not independently verified"

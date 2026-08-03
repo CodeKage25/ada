@@ -1,5 +1,6 @@
 "use client";
 
+import { IdentityBadge } from "@/components/hire/identity-badge";
 import { BadgeCheck, Trophy } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -84,7 +85,7 @@ function Pipeline() {
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 text-sm font-medium">
                   {c.headline ?? "Candidate"}
-                  {c.identity_verified && <BadgeCheck className="size-4 text-success" />}
+                  <IdentityBadge level={c.identity_level} />
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
                   {[c.seniority, c.location].filter(Boolean).join(" · ")}

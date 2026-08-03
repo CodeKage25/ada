@@ -1,5 +1,6 @@
 "use client";
 
+import { IdentityBadge } from "@/components/hire/identity-badge";
 import { BadgeCheck, Check, Loader2, Plus, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -286,11 +287,7 @@ function CandidateRow({ jobId, c }: { jobId: number; c: CandidateCard }) {
                 <BadgeCheck className="size-3" /> Verified {c.verified.assessment.score}
               </span>
             )}
-            {c.verified?.identity_verified && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-muted">
-                <ShieldCheck className="size-3" /> ID
-              </span>
-            )}
+            <IdentityBadge level={c.verified?.identity_level} />
           </div>
           <p className="mt-0.5 text-xs text-muted">
             {[

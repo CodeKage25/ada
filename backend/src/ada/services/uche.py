@@ -43,6 +43,7 @@ async def _credential_of(
     the latest scored proctored assessment (only VERIFIED/NEEDS_REVIEW are shown)."""
     cred: dict[str, Any] = {
         "identity_verified": bool(profile.identity_verified),
+        "identity_level": profile.identity_level,
         "identity_method": profile.identity_method,
         "assessment": None,
     }

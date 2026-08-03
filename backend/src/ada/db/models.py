@@ -163,6 +163,14 @@ class Profile(Base):
     # proctored Assessment). method records how it was confirmed (attested|kyc provider).
     identity_verified: Mapped[bool] = mapped_column(default=False)
     identity_method: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # Explicit assurance semantics — a self-attestation must never read as independent
+    # verification. identity_verified stays as the deprecated compat boolean.
+    identity_level: Mapped[str] = mapped_column(
+        String(32), default="unverified", server_default="unverified", index=True
+    )
+    identity_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # Employer-discovery opt-in (the channel-conflict wall) + the search vector/analysis.
     discoverable: Mapped[bool] = mapped_column(default=False, index=True)
     headline: Mapped[str | None] = mapped_column(String(200), nullable=True)

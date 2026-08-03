@@ -30,7 +30,8 @@ async def test_company_profile_and_shortlist_pipeline():
             # Two discoverable candidates; one identity-verified, in Lagos.
             s.add(Profile(user_id=cands[0], profile_text="Senior backend engineer, Python",
                           headline="Backend Engineer", location="Lagos", discoverable=True,
-                          identity_verified=True, insights={"seniority": "senior"}))
+                          identity_verified=True, identity_level="government_id_verified",
+                          insights={"seniority": "senior"}))
             s.add(Profile(user_id=cands[1], profile_text="Junior designer", headline="Designer",
                           location="Abuja", discoverable=True, identity_verified=False))
             await s.commit()

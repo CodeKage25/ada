@@ -20,6 +20,7 @@ from ada.db.repositories import AssessmentRepository, ProfileRepository
 from ada.db.session import get_session
 from ada.services import kyc
 from ada.services.ats import split_name
+from ada.services.identity import level_from_method
 from ada.services.verification import VerificationService, store_proctor_snapshots
 
 router = APIRouter(tags=["verification"])
@@ -54,11 +55,21 @@ def _started_at(a: Assessment) -> datetime:
     return started if started.tzinfo else started.replace(tzinfo=UTC)
 
 
-def _credential(assessment: Assessment | None, identity_verified: bool) -> dict:
+def _credential(
+    assessment: Assessment | None, identity_verified: bool,
+    identity_level: str = "unverified", identity_method: str | None = None,
+) -> dict:
     if assessment is None or assessment.status != AssessmentStatus.SCORED:
-        return {"identity_verified": identity_verified, "assessment": None}
+        return {
+            "identity_verified": identity_verified,
+            "identity_level": identity_level,
+            "identity_method": identity_method,
+            "assessment": None,
+        }
     return {
         "identity_verified": identity_verified,
+        "identity_level": identity_level,
+        "identity_method": identity_method,
         "assessment": {
             "skill": assessment.skill,
             "score": assessment.score,
@@ -180,7 +191,12 @@ async def my_credential(
 ) -> dict:
     assessment = await AssessmentRepository(session).latest_for_user(user.id)
     profile = await ProfileRepository(session).get(user.id)
-    return _credential(assessment, bool(profile and profile.identity_verified))
+    return _credential(
+        assessment,
+        bool(profile and profile.identity_verified),
+        profile.identity_level if profile else "unverified",
+        profile.identity_method if profile else None,
+    )
 
 
 @router.post("/candidate/identity/attest")
@@ -193,8 +209,10 @@ async def attest_identity(
     profile = await ProfileRepository(session).get(user.id)
     if profile is None or not (profile.full_name or "").strip():
         raise HTTPException(428, "Add your full name before verifying your identity.")
-    await ProfileRepository(session).set_identity_verified(user.id, method="attested")
-    return {"identity_verified": True, "method": "attested"}
+    await ProfileRepository(session).set_identity_verified(
+        user.id, method="attested", level=level_from_method("attested")
+    )
+    return {"identity_verified": True, "method": "attested", "identity_level": "self_attested"}
 
 
 class IdVerifyIn(BaseModel):
@@ -237,7 +255,12 @@ async def verify_identity(
 
     if not result.verified:
         raise HTTPException(422, result.detail)
+    method = f"smile:{body.id_type.lower()}"
     await ProfileRepository(session).set_identity_verified(
-        user.id, method=f"smile:{body.id_type.lower()}"
+        user.id, method=method, level=level_from_method(method)
     )
-    return {"identity_verified": True, "method": f"smile:{body.id_type.lower()}"}
+    return {
+        "identity_verified": True,
+        "method": f"smile:{body.id_type.lower()}",
+        "identity_level": "government_id_verified",
+    }

@@ -292,11 +292,18 @@ class ProfileRepository:
         )
         await self._s.commit()
 
-    async def set_identity_verified(self, user_id: str, *, method: str) -> None:
+    async def set_identity_verified(self, user_id: str, *, method: str, level: str) -> None:
+        """Level is computed by the caller (services.identity.level_from_method) — the db
+        layer stays free of service imports per the architecture contract."""
         await self._s.execute(
             update(Profile)
             .where(Profile.user_id == user_id)
-            .values(identity_verified=True, identity_method=method)
+            .values(
+                identity_verified=True,
+                identity_method=method,
+                identity_level=level,
+                identity_checked_at=datetime.now(UTC),
+            )
         )
         await self._s.commit()
 
@@ -359,7 +366,7 @@ class ProfileRepository:
         if seniority:
             stmt = stmt.where(Profile.insights["seniority"].astext == seniority)
         if verified_only:
-            stmt = stmt.where(Profile.identity_verified.is_(True))
+            stmt = stmt.where(Profile.identity_level == "government_id_verified")
         if exclude is not None:
             stmt = stmt.where(Profile.user_id != exclude)
         stmt = stmt.order_by(Profile.updated_at.desc()).limit(limit)
