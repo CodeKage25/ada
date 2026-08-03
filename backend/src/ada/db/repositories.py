@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import case, delete, func, literal, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +28,7 @@ from ada.db.models import (
     IntroMessage,
     IntroStatus,
     Job,
+    JobInteraction,
     Notification,
     NotificationPref,
     Outcome,
@@ -57,7 +58,7 @@ def role_keywords(role: str) -> list[str]:
     six. Tokens are letters-only by construction, so they are safe to embed in
     ILIKE patterns without escaping.
     """
-    words = re.findall(r"[a-zA-Z]{3,}", role.lower())
+    words = re.findall(r"[a-zA-Z]{2,}", role.lower())
     seen: list[str] = []
     for w in words:
         if w not in _ROLE_STOPWORDS and w not in seen:
@@ -161,8 +162,52 @@ class RunRepository:
         stmt = select(Run.id).where(Run.status == RunStatus.PAID, Run.created_at < cutoff)
         return list((await self._s.execute(stmt)).scalars().all())
 
+    async def reclaim_stale_running(self, older_than_seconds: int) -> int:
+        """Requeue runs abandoned mid-execution (worker died holding RUNNING) back to
+        PAID so the sweep re-dispatches them. Returns how many were reclaimed."""
+        cutoff = datetime.now(UTC) - timedelta(seconds=older_than_seconds)
+        stmt = (
+            update(Run)
+            .where(Run.status == RunStatus.RUNNING, Run.created_at < cutoff)
+            .values(status=RunStatus.PAID, attempts=Run.attempts + 1, stage=None)
+            .returning(Run.id)
+        )
+        reclaimed = list((await self._s.execute(stmt)).scalars().all())
+        await self._s.commit()
+        return len(reclaimed)
+
     async def set_status(self, run: Run, status: RunStatus) -> None:
         run.status = status
+        await self._s.commit()
+
+    async def attempts_for(self, run_id: str) -> int:
+        stmt = select(Run.attempts).where(Run.id == run_id)
+        return int((await self._s.execute(stmt)).scalar_one_or_none() or 0)
+
+    async def requeue_after_transient_failure(self, run_id: str, reason: str) -> int:
+        """Return a run to PAID so the recovery sweep re-dispatches it. Returns the new
+        attempt count."""
+        stmt = (
+            update(Run)
+            .where(Run.id == run_id)
+            .values(
+                status=RunStatus.PAID,
+                attempts=Run.attempts + 1,
+                failure_reason=reason,
+                stage=None,
+            )
+            .returning(Run.attempts)
+        )
+        attempts = (await self._s.execute(stmt)).scalar_one()
+        await self._s.commit()
+        return int(attempts)
+
+    async def mark_failed(self, run_id: str, reason: str) -> None:
+        await self._s.execute(
+            update(Run)
+            .where(Run.id == run_id)
+            .values(status=RunStatus.FAILED, attempts=Run.attempts + 1, failure_reason=reason)
+        )
         await self._s.commit()
 
     async def set_stage(self, run_id: str, stage: str) -> None:
@@ -410,6 +455,30 @@ class JobRepository:
         for job_id, vector in pairs:
             await self._s.execute(update(Job).where(Job.id == job_id).values(embedding=vector))
         await self._s.commit()
+
+    async def embedded_count(self) -> int:
+        stmt = select(func.count(Job.id)).where(Job.embedding.is_not(None))
+        return int((await self._s.execute(stmt)).scalar_one())
+
+    async def by_keywords(
+        self, role: str, k: int, *, exclude_ids: set[int] | None = None
+    ) -> list[Job]:
+        """Keyword lookup over titles, newest first. The fallback when a job has no
+        embedding yet, so matching still works before the vector backfill completes."""
+        keywords = role_keywords(role)
+        if not keywords:
+            return []
+        hits = sum(
+            (case((Job.title.ilike(f"%{kw}%"), 1), else_=0) for kw in keywords),
+            literal(0),
+        )
+        stmt = select(Job).where(or_(*(Job.title.ilike(f"%{kw}%") for kw in keywords)))
+        if exclude_ids:
+            stmt = stmt.where(Job.id.notin_(exclude_ids))
+        stmt = stmt.order_by(
+            hits.desc(), Job.posted_at.desc().nullslast(), Job.id.desc()
+        ).limit(k)
+        return list((await self._s.execute(stmt)).scalars().all())
 
     async def knn(self, embedding: list[float], k: int) -> list[tuple[Job, float]]:
         """Nearest embedded jobs by cosine distance. Returns (job, distance), closest first."""
@@ -1456,5 +1525,68 @@ class IntroMessageRepository:
             select(IntroMessage)
             .where(IntroMessage.intro_id == intro_id)
             .order_by(IntroMessage.id.asc())
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
+
+class JobFeedRepository:
+    """The candidate's standing job inbox: role-relevant jobs they haven't triaged yet,
+    cursor-paginated, plus their tracked shortlist."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    def _relevance(self, role: str | None):
+        keywords = role_keywords(role or "")
+        if not keywords:
+            return None
+        return or_(*(Job.title.ilike(f"%{kw}%") for kw in keywords))
+
+    def _untriaged(self, user_id: str):
+        triaged = select(JobInteraction.job_id).where(JobInteraction.user_id == user_id)
+        return Job.id.notin_(triaged)
+
+    async def feed(
+        self, user_id: str, *, role: str | None, cursor: int | None, limit: int
+    ) -> tuple[list[Job], int | None]:
+        """Untriaged, role-relevant jobs in stable id-desc order. Returns
+        (page, next_cursor); next_cursor is None on the last page."""
+        cond = self._relevance(role)
+        stmt = select(Job).where(self._untriaged(user_id))
+        if cond is not None:
+            stmt = stmt.where(cond)
+        if cursor is not None:
+            stmt = stmt.where(Job.id < cursor)
+        stmt = stmt.order_by(Job.id.desc()).limit(limit + 1)
+        rows = list((await self._s.execute(stmt)).scalars().all())
+        next_cursor = rows[limit - 1].id if len(rows) > limit else None
+        return rows[:limit], next_cursor
+
+    async def feed_count(self, user_id: str, *, role: str | None) -> int:
+        cond = self._relevance(role)
+        stmt = select(func.count(Job.id)).where(self._untriaged(user_id))
+        if cond is not None:
+            stmt = stmt.where(cond)
+        return int((await self._s.execute(stmt)).scalar_one())
+
+    async def triage(self, user_id: str, job_id: int, action: str) -> None:
+        """Record tracked/dismissed; re-triaging the same job updates the decision."""
+        stmt = (
+            insert(JobInteraction)
+            .values(user_id=user_id, job_id=job_id, action=action)
+            .on_conflict_do_update(
+                constraint="uq_job_interaction", set_={"action": action}
+            )
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+
+    async def tracked(self, user_id: str, *, limit: int = 200) -> list[Job]:
+        stmt = (
+            select(Job)
+            .join(JobInteraction, JobInteraction.job_id == Job.id)
+            .where(JobInteraction.user_id == user_id, JobInteraction.action == "tracked")
+            .order_by(JobInteraction.created_at.desc())
+            .limit(limit)
         )
         return list((await self._s.execute(stmt)).scalars().all())

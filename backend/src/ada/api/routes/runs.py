@@ -68,6 +68,7 @@ class RunResultOut(BaseModel):
     # Graph node currently executing while RUNNING; None otherwise. Lets the UI
     # show real progress instead of a client-side guess.
     stage: str | None = None
+    failure_reason: str | None = None
     target_role: str
     rewritten_cv: str | None = None
     matches: list[dict] | None = None
@@ -186,7 +187,8 @@ async def get_run(
         raise HTTPException(status_code=404, detail="run not found")
     _authorize(run, user, x_run_token)
     return RunResultOut(
-        status=run.status, stage=run.stage, target_role=run.target_role,
+        status=run.status, stage=run.stage, failure_reason=run.failure_reason,
+        target_role=run.target_role,
         rewritten_cv=run.rewritten_cv, matches=run.matches_json,
         questions=run.questions_json, interview=run.interview_json,
     )

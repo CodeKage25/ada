@@ -24,6 +24,22 @@ def _is_transient(exc: BaseException) -> bool:
     return isinstance(exc, (asyncio.TimeoutError, ConnectionError))
 
 
+def is_transient(exc: BaseException) -> bool:
+    """True if exc — or anything it wraps — is worth retrying later.
+
+    Walks __cause__/__context__ because orchestration layers (LangGraph, tenacity)
+    re-raise provider errors wrapped in their own exception types.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if _is_transient(current):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 async def retry_async(
     fn: Callable[[], Awaitable[T]], *, attempts: int = 3, base_delay: float = 0.5
 ) -> T:

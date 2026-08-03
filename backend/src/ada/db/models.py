@@ -75,6 +75,8 @@ class Run(Base):
     # "job_match", "interview_prep"); cleared on completion, kept on failure as a
     # diagnostic of where the run died.
     stage: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    failure_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -96,6 +98,18 @@ class Job(Base):
     # postings share the pool, so they surface in candidate matching too.
     posted_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBED_DIM), nullable=True)
+
+
+class JobInteraction(Base):
+    """A candidate's triage decision on a feed job — tracked (shortlisted) or dismissed.
+    One row per (user, job); the feed shows only untriaged jobs, so decisions stick."""
+    __tablename__ = "job_interactions"
+    __table_args__ = (UniqueConstraint("user_id", "job_id", name="uq_job_interaction"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
+    action: Mapped[str] = mapped_column(String(16))  # tracked | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class User(Base):
