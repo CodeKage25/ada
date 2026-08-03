@@ -15,6 +15,12 @@ The defensible seam is the supply: every completed Ada run produces a structured
 role-targeted, embedded candidate — and Uche can only ever see candidates who explicitly
 opted in (the consent wall). One person's résumé work becomes the other side's inventory.
 
+> **Product contract:** Ada and Uche are decision-support and workflow tools, not guarantees
+> of employment, identity, fit, payment, or application success. AI-derived matches and
+> explanations are estimates grounded in the data available at the time. Verified payment,
+> explicit candidate consent, provider confirmation, and detected ATS confirmation—not client
+> text or AI output—are the sources of truth for consequential state.
+
 ```
 Ada  gets people hired.        →  ada.recrulus.com   (candidates)
 Uche gets roles filled.        →  uche.recrulus.com  (employers)
@@ -91,6 +97,24 @@ flowchart LR
 A run is money-gated: it only executes after a verified payment (or an active
 subscription). Matching reads a **local** `jobs` table that a scheduled ingest job keeps
 fresh from real ATS boards — the request path never calls an external job API.
+
+### Opportunity Radar and match honesty
+
+The standing candidate jobs inbox is exposed by:
+
+- `GET /api/jobs/feed` — authenticated, role-tuned, cursor-paginated, untriaged jobs
+- `POST /api/jobs/{job_id}/triage` — idempotent `tracked` or `dismissed` feedback
+- `GET /api/jobs/tracked` — the candidate's tracked shortlist
+
+This is a persisted inbox foundation, not a guarantee that every result is semantically
+ranked. A semantic result has a numeric `match` percentage; a keyword fallback deliberately
+has `match: null` and must be rendered as a keyword/low-confidence result, never as `null%`
+or a comparable confidence score. Clients must treat `score_type`, `confidence`, freshness,
+and degraded states as part of the contract as these fields are expanded.
+
+The current feed uses the latest run target role or profile headline as a temporary tuning
+signal. A production Career Mission must replace that implicit preference with an explicit,
+versioned, candidate-owned mission containing hard constraints and a review/freshness timestamp.
 
 ### Employer loop (Uche)
 
@@ -171,6 +195,20 @@ make verify                               # backend gauntlet (see backend/README
 cd frontend && pnpm typecheck && pnpm build
 ```
 
+For the full backend contract, start Postgres and run the fast loop followed by the complete gate:
+
+```bash
+make up
+make fast
+RUN_DB_TESTS=1 make verify
+cd frontend && pnpm typecheck && pnpm build
+cd ../mobile && npx tsc --noEmit
+```
+
+Never treat a rendered page or HTTP 200 as proof that a workflow is complete. Verify persistence
+after restart, duplicate-request behavior, ownership isolation, provider failure states,
+migrations from an empty database, and the exact client response types.
+
 ## Deploy
 
 - **Backend** → Cloud Run (`make deploy`); secrets from Secret Manager; run
@@ -181,3 +219,12 @@ cd frontend && pnpm typecheck && pnpm build
 
 `backend/src/ada/config.py::validate_runtime` fails the boot in staging/prod unless a
 payment provider, `RESEND_API_KEY`, a real `FRONTEND_ORIGIN`, and non-wildcard CORS are set.
+
+## Production implementation brief
+
+`CLAUDE_IMPLEMENTATION_PROMPT.md` is the repository-aware implementation contract for future
+Claude Code sessions. It defines the protected paths, money-path invariants, current known gaps,
+match-score honesty requirements, durable-execution expectations, consent/privacy boundaries,
+phase order, client quality bar, and verification deliverables. Read it together with `AGENTS.md`,
+`backend/features/money_path.feature`, and `docs/GO-LIVE.md`; the code and protected specifications
+remain authoritative if documentation diverges.

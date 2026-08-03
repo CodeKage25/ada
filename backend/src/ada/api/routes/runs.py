@@ -26,6 +26,7 @@ from ada.payments.stripe import create_checkout
 from ada.services import entitlements
 from ada.services.interview import InterviewService
 from ada.services.runs import create_pending_run, execute_run
+from ada.services.search import normalize_match
 
 router = APIRouter(prefix="/runs", tags=["runs"])
 
@@ -189,7 +190,8 @@ async def get_run(
     return RunResultOut(
         status=run.status, stage=run.stage, failure_reason=run.failure_reason,
         target_role=run.target_role,
-        rewritten_cv=run.rewritten_cv, matches=run.matches_json,
+        rewritten_cv=run.rewritten_cv,
+        matches=[normalize_match(m) for m in run.matches_json] if run.matches_json else None,
         questions=run.questions_json, interview=run.interview_json,
     )
 

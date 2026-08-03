@@ -47,10 +47,10 @@ async def test_match_shapes_and_scores(monkeypatch):
         ]
     )
     out = await svc.match(jobs=jobs, target_role="Backend", cv_text="cv", k=2)
-    assert [m["title"] for m in out] == ["Backend Engineer", "Data Engineer"]
-    assert out[0]["match"] == 90  # (1 - 0.10) * 100
-    assert out[1]["match"] == 50
-    assert out[0]["company"] == "Paystack" and "reason" in out[0]
+    assert [m.title for m in out] == ["Backend Engineer", "Data Engineer"]
+    assert out[0].match == 90 and out[0].score_type == "semantic"
+    assert out[1].match == 50 and out[1].confidence == "low"
+    assert out[0].company == "Paystack" and out[0].confidence == "high" and out[0].reason
 
 
 async def test_match_skips_sparse_vector_index_and_uses_keywords(monkeypatch):
@@ -68,9 +68,9 @@ async def test_match_skips_sparse_vector_index_and_uses_keywords(monkeypatch):
         keyword_jobs=[_FakeJob("QA Engineer", "Acme", "Lagos", 2)],
     )
     out = await svc.match(jobs=jobs, target_role="QA Engineer", cv_text="cv", k=5)
-    assert [m["title"] for m in out] == ["QA Engineer"]
-    assert out[0]["match"] is None
-    assert "keyword" in out[0]["reason"].lower()
+    assert [m.title for m in out] == ["QA Engineer"]
+    assert out[0].match is None and out[0].score_type == "keyword"
+    assert "keyword" in out[0].reason.lower() and out[0].confidence == "low"
 
 
 async def test_match_degrades_to_keywords_when_embedding_unavailable(monkeypatch):
@@ -84,7 +84,7 @@ async def test_match_degrades_to_keywords_when_embedding_unavailable(monkeypatch
     svc.embed = quota  # type: ignore[method-assign]
     jobs = _FakeJobs([], keyword_jobs=[_FakeJob("Backend Engineer", "Acme", "Lagos", 3)])
     out = await svc.match(jobs=jobs, target_role="Backend Engineer", cv_text="cv", k=5)
-    assert [m["title"] for m in out] == ["Backend Engineer"]
+    assert [m.title for m in out] == ["Backend Engineer"]
 
 
 async def test_match_tops_up_vector_results_with_keywords_deduped(monkeypatch):
@@ -102,4 +102,23 @@ async def test_match_tops_up_vector_results_with_keywords_deduped(monkeypatch):
         keyword_jobs=[vector_hit, _FakeJob("Platform Engineer", "Jumia", "Remote", 2)],
     )
     out = await svc.match(jobs=jobs, target_role="Engineer", cv_text="cv", k=3)
-    assert [m["job_id"] for m in out] == [1, 2]
+    assert [m.job_id for m in out] == [1, 2]
+    assert {m.score_type for m in out} == {"semantic", "keyword"}
+
+
+def test_normalize_match_backfills_legacy_and_null_scores():
+    """Legacy stored matches (pre score_type) and keyword nulls both serialize honestly."""
+    from ada.services.search import normalize_match
+
+    legacy = normalize_match({"job_id": 1, "title": "PM", "match": 82.4, "reason": "Strong"})
+    assert legacy["match"] == 82
+    assert legacy["score_type"] == "semantic"
+    assert legacy["confidence"] == "high"
+
+    keyword = normalize_match({"job_id": 2, "title": "QA", "match": None})
+    assert keyword["match"] is None
+    assert keyword["score_type"] == "keyword"
+    assert keyword["confidence"] == "low"
+
+    junk = normalize_match({"job_id": 3, "title": "X", "match": "NaN"})
+    assert junk["match"] is None                      # a non-numeric score can't render as %

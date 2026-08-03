@@ -31,7 +31,9 @@ export interface Match {
   title: string;
   company: string;
   location: string;
-  match: number;
+  match: number | null;
+  score_type?: "semantic" | "keyword";
+  confidence?: "high" | "medium" | "low";
   reason: string;
 }
 
