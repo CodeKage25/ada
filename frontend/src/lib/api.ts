@@ -447,6 +447,24 @@ export interface JobPeek {
   location: string;
 }
 
+export interface FeedJob {
+  id: number;
+  title: string;
+  company: string;
+  location: string;
+  remote: boolean;
+  url: string | null;
+  description: string;
+  posted_at: string | null;
+}
+
+export interface JobsFeed {
+  jobs: FeedJob[];
+  next_cursor: number | null;
+  total: number;
+  role: string | null;
+}
+
 export interface JobsPreview {
   count: number;
   samples: JobPeek[];
@@ -761,6 +779,16 @@ export const api = {
       { method: "POST", body: JSON.stringify({ run_id: runId ?? null }) },
     ),
   listApplications: () => request<ApplicationSummary[]>("/api/applications"),
+
+  // jobs feed (the standing inbox)
+  jobsFeed: (cursor: number | null, limit = 20) =>
+    request<JobsFeed>(`/api/jobs/feed?limit=${limit}${cursor ? `&cursor=${cursor}` : ""}`),
+  triageJob: (jobId: number, action: "tracked" | "dismissed") =>
+    request<{ status: string }>(`/api/jobs/${jobId}/triage`, {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    }),
+  trackedJobs: () => request<FeedJob[]>("/api/jobs/tracked"),
 
   // outcomes (hiring funnel)
   getPipeline: () => request<Pipeline>("/api/outcomes"),

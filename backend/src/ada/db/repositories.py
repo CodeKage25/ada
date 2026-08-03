@@ -28,6 +28,7 @@ from ada.db.models import (
     IntroMessage,
     IntroStatus,
     Job,
+    JobInteraction,
     Notification,
     NotificationPref,
     Outcome,
@@ -1524,5 +1525,68 @@ class IntroMessageRepository:
             select(IntroMessage)
             .where(IntroMessage.intro_id == intro_id)
             .order_by(IntroMessage.id.asc())
+        )
+        return list((await self._s.execute(stmt)).scalars().all())
+
+
+class JobFeedRepository:
+    """The candidate's standing job inbox: role-relevant jobs they haven't triaged yet,
+    cursor-paginated, plus their tracked shortlist."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._s = session
+
+    def _relevance(self, role: str | None):
+        keywords = role_keywords(role or "")
+        if not keywords:
+            return None
+        return or_(*(Job.title.ilike(f"%{kw}%") for kw in keywords))
+
+    def _untriaged(self, user_id: str):
+        triaged = select(JobInteraction.job_id).where(JobInteraction.user_id == user_id)
+        return Job.id.notin_(triaged)
+
+    async def feed(
+        self, user_id: str, *, role: str | None, cursor: int | None, limit: int
+    ) -> tuple[list[Job], int | None]:
+        """Untriaged, role-relevant jobs in stable id-desc order. Returns
+        (page, next_cursor); next_cursor is None on the last page."""
+        cond = self._relevance(role)
+        stmt = select(Job).where(self._untriaged(user_id))
+        if cond is not None:
+            stmt = stmt.where(cond)
+        if cursor is not None:
+            stmt = stmt.where(Job.id < cursor)
+        stmt = stmt.order_by(Job.id.desc()).limit(limit + 1)
+        rows = list((await self._s.execute(stmt)).scalars().all())
+        next_cursor = rows[limit - 1].id if len(rows) > limit else None
+        return rows[:limit], next_cursor
+
+    async def feed_count(self, user_id: str, *, role: str | None) -> int:
+        cond = self._relevance(role)
+        stmt = select(func.count(Job.id)).where(self._untriaged(user_id))
+        if cond is not None:
+            stmt = stmt.where(cond)
+        return int((await self._s.execute(stmt)).scalar_one())
+
+    async def triage(self, user_id: str, job_id: int, action: str) -> None:
+        """Record tracked/dismissed; re-triaging the same job updates the decision."""
+        stmt = (
+            insert(JobInteraction)
+            .values(user_id=user_id, job_id=job_id, action=action)
+            .on_conflict_do_update(
+                constraint="uq_job_interaction", set_={"action": action}
+            )
+        )
+        await self._s.execute(stmt)
+        await self._s.commit()
+
+    async def tracked(self, user_id: str, *, limit: int = 200) -> list[Job]:
+        stmt = (
+            select(Job)
+            .join(JobInteraction, JobInteraction.job_id == Job.id)
+            .where(JobInteraction.user_id == user_id, JobInteraction.action == "tracked")
+            .order_by(JobInteraction.created_at.desc())
+            .limit(limit)
         )
         return list((await self._s.execute(stmt)).scalars().all())

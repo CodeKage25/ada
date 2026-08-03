@@ -100,6 +100,18 @@ class Job(Base):
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBED_DIM), nullable=True)
 
 
+class JobInteraction(Base):
+    """A candidate's triage decision on a feed job — tracked (shortlisted) or dismissed.
+    One row per (user, job); the feed shows only untriaged jobs, so decisions stick."""
+    __tablename__ = "job_interactions"
+    __table_args__ = (UniqueConstraint("user_id", "job_id", name="uq_job_interaction"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
+    action: Mapped[str] = mapped_column(String(16))  # tracked | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class User(Base):
     __tablename__ = "users"
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

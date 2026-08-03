@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   CreditCard,
   FileText,
+  Briefcase,
   Inbox,
   LayoutDashboard,
   LayoutList,
@@ -41,6 +42,7 @@ const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
     label: "Workspace",
     items: [
       { href: "/app", label: "Home", icon: LayoutDashboard, exact: true },
+      { href: "/app/jobs", label: "Jobs", icon: Briefcase },
       { href: "/app/new", label: "New run", icon: Plus },
       { href: "/app/runs", label: "My runs", icon: LayoutList },
       { href: "/app/documents", label: "Documents", icon: FileText },
@@ -209,7 +211,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {(
               [
                 { href: "/app", label: "Home", icon: TabIcon.home, exact: true },
-                { href: "/app/runs", label: "Runs", icon: TabIcon.runs },
+                { href: "/app/jobs", label: "Jobs", icon: TabIcon.runs },
               ] as const
             ).map((item) => (
               <Link
