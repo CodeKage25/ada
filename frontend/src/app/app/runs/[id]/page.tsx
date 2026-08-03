@@ -164,10 +164,16 @@ function RunDetail() {
                           {m.company} · {m.location}
                         </p>
                       </div>
-                      <span className="display text-2xl text-accent">{m.match}%</span>
+                      {m.match != null ? (
+                        <span className="display text-2xl text-accent">{m.match}%</span>
+                      ) : (
+                        <span className="rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-medium text-muted">
+                          Keyword match
+                        </span>
+                      )}
                     </div>
                     <div className="mt-3">
-                      <ScoreBar value={m.match} />
+                      {m.match != null && <ScoreBar value={m.match} />}
                     </div>
                     <p className="mt-2.5 text-xs leading-relaxed text-muted">{m.reason}</p>
                     <div className="mt-3 flex justify-end">

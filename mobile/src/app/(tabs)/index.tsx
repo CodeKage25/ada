@@ -165,11 +165,17 @@ export default function HomeScreen() {
                     <Sans size={12} weight="medium" style={{ flexShrink: 1 }} numberOfLines={1}>
                       {m.title} <Sans size={12} color={t.muted}>· {m.company}</Sans>
                     </Sans>
-                    <Serif size={15} color={t.accent}>
-                      {m.match}%
-                    </Serif>
+                    {m.match != null ? (
+                      <Serif size={15} color={t.accent}>
+                        {m.match}%
+                      </Serif>
+                    ) : (
+                      <Sans size={10} color={t.muted}>
+                        Keyword match
+                      </Sans>
+                    )}
                   </View>
-                  <ScoreBar value={m.match} />
+                  {m.match != null && <ScoreBar value={m.match} />}
                 </View>
               </View>
             ))}

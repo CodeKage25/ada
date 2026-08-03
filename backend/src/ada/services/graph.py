@@ -70,7 +70,7 @@ def build_graph(
             k=s.jobs_match_k,
         )
         emit_run_log(run_id=run_id, step="job_match", status="ok", n=len(matches))
-        return {"matches": matches}
+        return {"matches": [m.model_dump() for m in matches]}
 
     async def interview_prep(state: RunState) -> RunState:
         await _stage("interview_prep")

@@ -202,11 +202,17 @@ export default function RunDetailScreen() {
                       <Sans size={12} weight="medium" style={{ flexShrink: 1 }} numberOfLines={1}>
                         {m.title} · {m.company}
                       </Sans>
-                      <Serif size={15} color={t.accent}>
-                        {m.match}%
-                      </Serif>
+                      {m.match != null ? (
+                        <Serif size={15} color={t.accent}>
+                          {m.match}%
+                        </Serif>
+                      ) : (
+                        <Sans size={10} color={t.muted}>
+                          Keyword match
+                        </Sans>
+                      )}
                     </View>
-                    <ScoreBar value={m.match} />
+                    {m.match != null && <ScoreBar value={m.match} />}
                     <Sans size={11} color={t.muted} style={{ marginTop: 5 }}>
                       {m.reason}
                     </Sans>

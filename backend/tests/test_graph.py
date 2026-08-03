@@ -8,7 +8,11 @@ class _FakeCV:
 
 class _FakeSearch:
     async def match(self, *, jobs, target_role: str, cv_text: str, k: int):
-        return [{"title": "Backend Engineer", "match": 90}]
+        from ada.services.search import MatchResult
+
+        return [MatchResult(job_id=1, title="Backend Engineer", company="Acme",
+                            location="Lagos", url=None, match=90, score_type="semantic",
+                            confidence="high", reason="Strong fit")]
 
 
 class _FakeInterview:
@@ -31,7 +35,9 @@ async def test_graph_runs_all_nodes_in_order(monkeypatch):
         {"run_id": "r1", "email": "a@b.c", "target_role": "Engineer", "cv_text": "cv"}
     )
     assert final["rewritten_cv"] == "REWRITTEN"
-    assert final["matches"] == [{"title": "Backend Engineer", "match": 90}]
+    m = final["matches"][0]
+    assert m["title"] == "Backend Engineer" and m["match"] == 90
+    assert m["score_type"] == "semantic" and m["confidence"] == "high"
     assert final["questions"] == ["Q1", "Q2"]
     # Every node reported itself, in execution order.
     assert stages == ["intake", "cv_rewrite", "job_match", "interview_prep"]

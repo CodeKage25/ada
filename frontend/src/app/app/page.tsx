@@ -203,10 +203,16 @@ export default function HomePage() {
                         {m.title}{" "}
                         <span className="font-normal text-muted">· {m.company}</span>
                       </p>
-                      <span className="display text-lg text-accent">{m.match}%</span>
+                      {m.match != null ? (
+                        <span className="display text-lg text-accent">{m.match}%</span>
+                      ) : (
+                        <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-medium text-muted">
+                          Keyword match
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1">
-                      <ScoreBar value={m.match} />
+                      {m.match != null && <ScoreBar value={m.match} />}
                     </div>
                   </div>
                 </div>

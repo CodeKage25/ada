@@ -69,7 +69,11 @@ async def _digest_for_candidate(profile: Profile) -> bool:
             return False
         if profile.embedding is None:
             return False
-        rows = await JobRepository(session).knn(list(profile.embedding), s.digest_matches)
+        jobs_repo = JobRepository(session)
+        if await jobs_repo.embedded_count() < s.min_embedded_for_vector:
+            log.info("digest_skipped_low_coverage", user_id=profile.user_id)
+            return False
+        rows = await jobs_repo.knn(list(profile.embedding), s.digest_matches)
 
     roles = [
         {

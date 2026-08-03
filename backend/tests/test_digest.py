@@ -19,11 +19,13 @@ def test_match_pct_pure():
 async def test_digest_sends_once_then_respects_cooldown():
     from sqlalchemy import delete
 
+    from ada.config import get_settings
     from ada.db.models import Job, Notification, NotificationPref, Profile, User
     from ada.db.repositories import JobRepository, NotificationRepository, ProfileRepository
     from ada.db.session import _session_factory, init_db
     from ada.digest import DIGEST_KIND, run_digest
 
+    get_settings().min_embedded_for_vector = 1  # tiny seeded corpus is the test fixture
     await init_db()
     uid = uuid.uuid4().hex
     vec = [0.1] * 768
