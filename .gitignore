@@ -26,3 +26,6 @@ mutants/
 .coverage
 coverage.xml
 docker-compose.override.yml
+
+# Local implementation briefs (not part of the repo)
+CLAUDE_IMPLEMENTATION_PROMPT.md
