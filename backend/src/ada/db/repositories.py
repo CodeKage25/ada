@@ -590,7 +590,7 @@ class ApplicationRepository:
                     [ApplicationStatus.NEEDS_ATTENTION, ApplicationStatus.FAILED]
                 ),
             )
-            .values(status=ApplicationStatus.PREPARING, detail=None)
+            .values(status=ApplicationStatus.PREPARING, detail=None, failure_code=None)
             .returning(Application.id)
         )
         claimed = (await self._s.execute(stmt)).scalar_one_or_none() is not None
@@ -605,14 +605,28 @@ class ApplicationRepository:
         )
         return list((await self._s.execute(stmt)).scalars().all())
 
+    async def set_progress(self, application_id: str, text: str) -> None:
+        """Live stage note while PREPARING — the user-visible 'Ada is doing X…' line.
+        Guarded on status so a late note can never overwrite a final outcome."""
+        await self._s.execute(
+            update(Application)
+            .where(
+                Application.id == application_id,
+                Application.status == ApplicationStatus.PREPARING,
+            )
+            .values(detail=text)
+        )
+        await self._s.commit()
+
     async def set_status(
         self,
         application_id: str,
         status: ApplicationStatus,
         *,
         detail: str | None = None,
+        failure_code: str | None = None,
     ) -> None:
-        values: dict[str, Any] = {"status": status, "detail": detail}
+        values: dict[str, Any] = {"status": status, "detail": detail, "failure_code": failure_code}
         if status == ApplicationStatus.SUBMITTED:
             values["submitted_at"] = datetime.now(UTC)
         await self._s.execute(

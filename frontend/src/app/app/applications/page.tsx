@@ -1,6 +1,6 @@
 "use client";
 
-import { Send } from "lucide-react";
+import { ExternalLink, Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -97,6 +97,16 @@ export default function ApplicationsPage() {
                   <p className="mt-2.5 rounded-lg bg-surface-2 px-3 py-2 text-xs leading-relaxed text-muted">
                     {app.detail}
                   </p>
+                )}
+                {app.status === "needs_attention" && !app.can_retry && app.apply_url && (
+                  <a
+                    href={app.apply_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-xs font-medium text-accent-ink hover:opacity-90"
+                  >
+                    Apply manually — your CV is ready <ExternalLink className="size-3" />
+                  </a>
                 )}
               </Card>
             );

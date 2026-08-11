@@ -1,10 +1,24 @@
 import asyncio
 import tempfile
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ada.services.ats import ApplicantAnswers, FormAction, FormPlan, SubmitOutcome
+from ada.services.ats import (
+    ApplicantAnswers,
+    FormAction,
+    FormPlan,
+    SubmitOutcome,
+    looks_blocked,
+    note,
+)
+
+Progress = Callable[[str], Awaitable[None]] | None
+
+BLOCKED_DETAIL = (
+    "The employer's site blocks automated applications — apply manually in one click; "
+    "your tailored CV is ready."
+)
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
@@ -14,25 +28,36 @@ STEP_TIMEOUT_MS = 8_000
 ERROR_SELECTORS = ('[role="alert"]', ".field-error", ".error-message", ".application-error")
 
 
-async def execute_plan(plan: FormPlan, answers: ApplicantAnswers) -> SubmitOutcome:
+async def execute_plan(
+    plan: FormPlan, answers: ApplicantAnswers, on_progress: Progress = None
+) -> SubmitOutcome:
     try:
-        return await asyncio.wait_for(_run(plan, answers), timeout=TOTAL_TIMEOUT_S)
+        return await asyncio.wait_for(_run(plan, answers, on_progress), timeout=TOTAL_TIMEOUT_S)
     except TimeoutError:
         return SubmitOutcome(
             status="needs_attention",
             detail="The employer's form took too long to respond — try again shortly.",
+            code="timeout",
         )
 
 
-async def _run(plan: FormPlan, answers: ApplicantAnswers) -> SubmitOutcome:
+async def _run(
+    plan: FormPlan, answers: ApplicantAnswers, on_progress: Progress = None
+) -> SubmitOutcome:
     from playwright.async_api import async_playwright
 
     missing: list[str] = []
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         try:
+            await note(on_progress, "Opening the employer's application form…")
             page = await browser.new_page()
             await page.goto(plan.apply_url, wait_until="domcontentloaded")
+            if looks_blocked(await page.title(), await page.content()):
+                return SubmitOutcome(
+                    status="needs_attention", detail=BLOCKED_DETAIL, code="blocked"
+                )
+            await note(on_progress, "Filling in your details and uploading your CV…")
             with tempfile.TemporaryDirectory() as tmp:
                 cv_path = Path(tmp) / answers.cv_filename
                 cv_path.write_bytes(answers.cv_bytes)
@@ -45,12 +70,16 @@ async def _run(plan: FormPlan, answers: ApplicantAnswers) -> SubmitOutcome:
                         status="needs_attention",
                         detail="Couldn't locate required fields: " + ", ".join(missing),
                         missing=missing,
+                        code="fields_missing",
                     )
+                await note(on_progress, "Submitting your application…")
                 if not await _click_first(page, plan.submit_selectors):
                     return SubmitOutcome(
                         status="needs_attention",
                         detail="Couldn't find the submit button on the employer's form.",
+                        code="no_submit",
                     )
+                await note(on_progress, "Waiting for the employer's confirmation…")
                 await page.wait_for_load_state("networkidle", timeout=30_000)
             if await _any_visible(page, plan.confirmation_markers):
                 return SubmitOutcome(status="submitted")
@@ -59,10 +88,12 @@ async def _run(plan: FormPlan, answers: ApplicantAnswers) -> SubmitOutcome:
                 return SubmitOutcome(
                     status="needs_attention",
                     detail="The form needs answers only you can give: " + "; ".join(errors[:5]),
+                    code="manual_questions",
                 )
             return SubmitOutcome(
                 status="needs_attention",
                 detail="No submission confirmation appeared — the form may have extra steps.",
+                code="no_confirmation",
             )
         finally:
             await browser.close()

@@ -85,9 +85,11 @@ def test_build_plan_per_source(source: str, url: str, expected_apply_url: str):
 
 def test_build_plan_rejects_missing_url_and_unknown_source():
     with pytest.raises(ApplyPrecondition):
-        build_plan(_Obj(source="greenhouse", url=None), _answers())
+        build_plan(_Obj(source="greenhouse", url=None, company="No Such Co", external_id="1"),
+                   _answers())
     with pytest.raises(ApplyPrecondition):
-        build_plan(_Obj(source="jooble", url="https://x.example"), _answers())
+        build_plan(_Obj(source="jooble", url="https://x.example", company="X", external_id="1"),
+                   _answers())
 
 
 def test_is_supported_any_source_with_url():
