@@ -112,15 +112,20 @@ class SearchService:
         """
         matches: list[MatchResult] = []
         embedded = await jobs.embedded_count()
+        total = await jobs.count()
         if embedded >= get_settings().min_embedded_for_vector:
+            # At partial coverage the vector index only sees a slice of the corpus, so
+            # semantic results get half the slots and keywords search the rest of it.
+            coverage = embedded / total if total else 1.0
+            quota = k if coverage >= 0.6 else (k + 1) // 2
             try:
                 vector = await self.embed(f"{target_role}\n\n{cv_text}")
-                rows = await jobs.knn(vector, k)
+                rows = await jobs.knn(vector, quota)
                 matches = [self._to_match(job, distance) for job, distance in rows]
             except Exception as exc:  # noqa: BLE001 — degrade to keywords, never fail the run
                 log.warning("match_embedding_unavailable", error=str(exc))
         else:
-            log.info("match_vector_skipped_low_coverage", embedded=embedded)
+            log.info("match_vector_skipped_low_coverage", embedded=embedded, total=total)
 
         if len(matches) < k:
             seen = {m.job_id for m in matches}

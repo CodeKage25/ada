@@ -10,16 +10,22 @@ class _FakeJob:
 
 
 class _FakeJobs:
-    def __init__(self, rows, *, embedded=10_000, keyword_jobs=None) -> None:
+    def __init__(self, rows, *, embedded=10_000, total=10_000, keyword_jobs=None) -> None:
         self._rows = rows
         self._embedded = embedded
+        self._total = total
         self._keyword_jobs = keyword_jobs or []
+        self.knn_asked: list[int] = []
 
     async def knn(self, vector, k):
+        self.knn_asked.append(k)
         return self._rows[:k]
 
     async def embedded_count(self):
         return self._embedded
+
+    async def count(self):
+        return self._total
 
     async def by_keywords(self, role, k, *, exclude_ids=None):
         exclude = exclude_ids or set()
@@ -122,3 +128,30 @@ def test_normalize_match_backfills_legacy_and_null_scores():
 
     junk = normalize_match({"job_id": 3, "title": "X", "match": "NaN"})
     assert junk["match"] is None                      # a non-numeric score can't render as %
+
+
+async def test_match_halves_semantic_quota_at_partial_coverage(monkeypatch):
+    """A partially embedded corpus mustn't monopolize the slots — keywords cover the rest."""
+    monkeypatch.setattr(search, "vertex_client", lambda: object())
+    svc = SearchService()
+
+    async def fake_embed(_):
+        return [0.0] * 768
+
+    svc.embed = fake_embed  # type: ignore[method-assign]
+    rows = [(_FakeJob("Engineer", "Acme", "Lagos", i), 0.3) for i in range(1, 21)]
+    keyword_jobs = [_FakeJob("Platform Engineer", "Jumia", "Remote", i) for i in range(100, 140)]
+
+    # 10% coverage: semantic gets ceil(k/2), keywords fill the rest from the whole corpus.
+    sparse = _FakeJobs(rows, embedded=600, total=6_000, keyword_jobs=keyword_jobs)
+    got = await svc.match(jobs=sparse, target_role="engineer", cv_text="cv", k=9)
+    assert sparse.knn_asked == [5]
+    assert sum(1 for m in got if m.score_type == "semantic") == 5
+    assert sum(1 for m in got if m.score_type == "keyword") == 4
+    assert len(got) == 9
+
+    # Full coverage: semantic keeps every slot.
+    dense = _FakeJobs(rows, embedded=6_000, total=6_000, keyword_jobs=keyword_jobs)
+    got = await svc.match(jobs=dense, target_role="engineer", cv_text="cv", k=9)
+    assert dense.knn_asked == [9]
+    assert all(m.score_type == "semantic" for m in got)
