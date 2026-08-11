@@ -24,6 +24,8 @@ from ada.services.apply import (
     latest_cv_markdown,
     run_submission,
 )
+from ada.services.ats import can_retry
+from ada.services.ats.resolve import canonical_apply_url
 
 router = APIRouter(tags=["applications"])
 
@@ -38,6 +40,9 @@ class ApplicationOut(BaseModel):
     detail: str | None
     submitted_at: str | None
     created_at: str
+    failure_code: str | None = None
+    can_retry: bool = True
+    apply_url: str | None = None
 
 
 class ApplyIn(BaseModel):
@@ -135,6 +140,9 @@ async def list_applications(
             if application.submitted_at
             else None,
             created_at=application.created_at.isoformat(),
+            failure_code=application.failure_code,
+            can_retry=can_retry(application.failure_code),
+            apply_url=canonical_apply_url(job) or job.url,
         )
         for application, job in rows
     ]

@@ -14,10 +14,11 @@ from ada.db.repositories import (
 )
 from ada.db.session import _session_factory
 from ada.observability import log
-from ada.services.ats import ApplicantAnswers, FormPlan, split_name
+from ada.services.ats import ApplicantAnswers, FormPlan, can_retry, split_name
 from ada.services.ats import ashby as ats_ashby
 from ada.services.ats import greenhouse as ats_greenhouse
 from ada.services.ats import lever as ats_lever
+from ada.services.ats.resolve import canonical_apply_url
 
 SUPPORTED_SOURCES = {"greenhouse", "lever", "ashby"}
 
@@ -86,14 +87,15 @@ def build_answers(user: User, profile: Profile | None, cv_markdown: str) -> Appl
 
 
 def build_plan(job: Job, answers: ApplicantAnswers) -> FormPlan:
-    if not job.url:
+    target = canonical_apply_url(job) or job.url
+    if not target:
         raise ApplyPrecondition("no_url", "This listing has no application page on file.")
     if job.source == ats_greenhouse.SOURCE:
-        return ats_greenhouse.build_form_plan(job.url, answers)
+        return ats_greenhouse.build_form_plan(target, answers)
     if job.source == ats_lever.SOURCE:
-        return ats_lever.build_form_plan(job.url, answers)
+        return ats_lever.build_form_plan(target, answers)
     if job.source == ats_ashby.SOURCE:
-        return ats_ashby.build_form_plan(job.url, answers)
+        return ats_ashby.build_form_plan(target, answers)
     raise ApplyPrecondition("unsupported_source", "No deterministic plan for this source.")
 
 
@@ -124,18 +126,22 @@ async def run_submission(application_id: str) -> None:
                 raise ApplyPrecondition("no_url", "This listing has no application page on file.")
             answers = build_answers(user, profile, run.rewritten_cv)
             plan = build_plan(job, answers) if job.source in SUPPORTED_SOURCES else None
-            job_url = job.url
+            job_url = canonical_apply_url(job) or job.url
         except ApplyPrecondition as exc:
             await applications.set_status(
                 application_id, ApplicationStatus.NEEDS_ATTENTION, detail=str(exc)
             )
             return
+    async def _progress(text: str) -> None:
+        async with _session_factory() as s:
+            await ApplicationRepository(s).set_progress(application_id, text)
+
     try:
         async with _browser_gate():
             if plan is not None:
-                outcome = await execute_plan(plan, answers)
+                outcome = await execute_plan(plan, answers, on_progress=_progress)
             else:
-                outcome = await submit_generic(job_url, answers)
+                outcome = await submit_generic(job_url, answers, on_progress=_progress)
     except Exception as exc:  # noqa: BLE001 — any submit failure must land in status, not logs alone
         log.error("apply_submit_crashed", application_id=application_id, error=str(exc))
         outcome = None
@@ -148,6 +154,7 @@ async def run_submission(application_id: str) -> None:
             await applications.set_status(
                 application_id, ApplicationStatus.FAILED,
                 detail="Something broke on our side — we'll look into it. Nothing was submitted.",
+                failure_code="crashed",
             )
             _note = ("run_failed", "Application couldn't be sent",
                      f"We hit a snag applying to {role} — nothing was submitted. Try again.")
@@ -164,11 +171,17 @@ async def run_submission(application_id: str) -> None:
                      f"Ada submitted your application to {role}.")
         else:
             await applications.set_status(
-                application_id, ApplicationStatus.NEEDS_ATTENTION, detail=outcome.detail
+                application_id, ApplicationStatus.NEEDS_ATTENTION, detail=outcome.detail,
+                failure_code=outcome.code,
             )
-            _note = ("application_attention", "An application needs you",
-                     f"Your application to {role} needs a step only you can do: "
-                     f"{outcome.detail}")
+            if can_retry(outcome.code):
+                _note = ("application_attention", "An application needs you",
+                         f"Your application to {role} needs a step only you can do: "
+                         f"{outcome.detail}")
+            else:
+                _note = ("application_attention", "Apply manually — packet ready",
+                         f"{role} can't take automated applications ({outcome.detail}) "
+                         "Your tailored CV is ready — open the role and apply in one click.")
         if application is not None:
             from ada.services.notify import notify
 
@@ -194,5 +207,6 @@ async def recover_stuck_applications() -> int:
                 application_id,
                 ApplicationStatus.NEEDS_ATTENTION,
                 detail="This application was interrupted before finishing — tap Apply to retry.",
+                failure_code="interrupted",
             )
     return len(stuck)

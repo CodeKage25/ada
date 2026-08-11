@@ -374,6 +374,7 @@ def _talent_card(p: object) -> dict:
         "compensation": getattr(p, "compensation", None) or ins.get("compensation"),
         "work_pref": getattr(p, "work_pref", None) or ins.get("work_pref"),
         "identity_verified": bool(getattr(p, "identity_verified", False)),
+        "identity_level": getattr(p, "identity_level", "unverified"),
     }
 
 

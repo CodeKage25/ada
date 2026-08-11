@@ -234,6 +234,7 @@ export interface TalentCard {
   compensation: string | null;
   work_pref: string | null;
   identity_verified: boolean;
+  identity_level?: IdentityLevel;
   saved?: boolean;
   stage?: ShortlistStage;
   note?: string | null;
@@ -271,8 +272,11 @@ export interface CredentialAssessment {
   taken_at?: string | null;
 }
 
+export type IdentityLevel = "unverified" | "self_attested" | "government_id_verified";
+
 export interface Credential {
   identity_verified: boolean;
+  identity_level?: IdentityLevel;
   identity_method?: string | null;
   assessment: CredentialAssessment | null;
 }
@@ -351,6 +355,9 @@ export interface ApplicationSummary {
   detail: string | null;
   submitted_at: string | null;
   created_at: string;
+  failure_code: string | null;
+  can_retry: boolean;
+  apply_url: string | null;
 }
 
 export type OutcomeStage = "applied" | "interviewing" | "offer" | "hired" | "rejected";

@@ -9,9 +9,11 @@ from typing import TYPE_CHECKING, Any
 
 from ada.config import get_settings
 from ada.resilience import retry_async
-from ada.services.ats import ApplicantAnswers, SubmitOutcome
+from ada.services.ats import ApplicantAnswers, SubmitOutcome, looks_blocked, note
 from ada.services.ats.executor import (
+    BLOCKED_DETAIL,
     TOTAL_TIMEOUT_S,
+    Progress,
     _any_visible,
     _collect_errors,
     _texts_for,
@@ -95,24 +97,35 @@ async def _model_map(
     return parse_mapping(resp.text or "", len(fields))
 
 
-async def submit_generic(url: str, answers: ApplicantAnswers) -> SubmitOutcome:
+async def submit_generic(
+    url: str, answers: ApplicantAnswers, on_progress: Progress = None
+) -> SubmitOutcome:
     try:
-        return await asyncio.wait_for(_run(url, answers), timeout=TOTAL_TIMEOUT_S)
+        return await asyncio.wait_for(_run(url, answers, on_progress), timeout=TOTAL_TIMEOUT_S)
     except TimeoutError:
         return SubmitOutcome(
             status="needs_attention",
             detail="The application page took too long to respond — try again shortly.",
+            code="timeout",
         )
 
 
-async def _run(url: str, answers: ApplicantAnswers) -> SubmitOutcome:
+async def _run(
+    url: str, answers: ApplicantAnswers, on_progress: Progress = None
+) -> SubmitOutcome:
     from playwright.async_api import async_playwright
 
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
         try:
+            await note(on_progress, "Opening the application page…")
             page = await browser.new_page()
             await page.goto(url, wait_until="domcontentloaded")
+            if looks_blocked(await page.title(), await page.content()):
+                return SubmitOutcome(
+                    status="needs_attention", detail=BLOCKED_DETAIL, code="blocked"
+                )
+            await note(on_progress, "Reading the employer's form…")
             await _follow_apply_link(page)
             fields = await _collect_fields(page)
             if not fields:
@@ -120,34 +133,47 @@ async def _run(url: str, answers: ApplicantAnswers) -> SubmitOutcome:
                     status="needs_attention",
                     detail="Couldn't find an application form on that page — it may "
                     "require a login or list the job elsewhere.",
+                    code="no_form",
                 )
+            await note(on_progress, "Matching the form's questions to your profile…")
             mapping = await _model_map(fields, answers)
             if not any(v == CV_FILE_MARKER for _, v in mapping) and not mapping:
                 return SubmitOutcome(
                     status="needs_attention",
                     detail="The form's questions couldn't be answered from your profile alone.",
+                    code="manual_questions",
                 )
+            await note(on_progress, "Filling in your details and uploading your CV…")
             filled = await _fill(page, fields, mapping, answers)
             if not filled:
                 return SubmitOutcome(
                     status="needs_attention",
                     detail="The form fields wouldn't accept input — it may be login-walled.",
+                    code="login_walled",
                 )
+            await note(on_progress, "Submitting your application…")
             if not await _submit(page):
                 return SubmitOutcome(
                     status="needs_attention",
                     detail="Couldn't find a working submit button on the form.",
+                    code="no_submit",
                 )
+            await note(on_progress, "Waiting for the employer's confirmation…")
             await page.wait_for_load_state("networkidle", timeout=30_000)
             if await _confirmed(page):
                 return SubmitOutcome(status="submitted")
             errors = await _collect_errors(page)
-            detail = (
-                "The form needs answers only you can give: " + "; ".join(errors[:5])
-                if errors
-                else "No submission confirmation appeared — the form may have extra steps."
+            if errors:
+                return SubmitOutcome(
+                    status="needs_attention",
+                    detail="The form needs answers only you can give: " + "; ".join(errors[:5]),
+                    code="manual_questions",
+                )
+            return SubmitOutcome(
+                status="needs_attention",
+                detail="No submission confirmation appeared — the form may have extra steps.",
+                code="no_confirmation",
             )
-            return SubmitOutcome(status="needs_attention", detail=detail)
         finally:
             await browser.close()
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { IdentityBadge } from "@/components/hire/identity-badge";
 import { BadgeCheck, Check, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -34,7 +35,7 @@ function CandidateCard({ c, onSaved }: { c: TalentCard; onSaved?: (id: string) =
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 font-medium">
             {c.headline ?? "Candidate"}
-            {c.identity_verified && <BadgeCheck className="size-4 text-success" />}
+            <IdentityBadge level={c.identity_level} />
           </p>
           <p className="mt-0.5 text-xs text-muted">
             {[c.seniority, c.years_experience ? `${c.years_experience}y` : null, c.location]

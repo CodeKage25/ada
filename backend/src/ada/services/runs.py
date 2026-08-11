@@ -97,6 +97,20 @@ def _is_quota(exc: BaseException) -> bool:
     return False
 
 
+async def sweep_once() -> tuple[int, int]:
+    """One recovery pass: re-dispatch lost runs, flag lost applications.
+
+    Task-durability classification (Phase 0.3): runs and applications are the
+    durable-critical work — their state lives in Postgres and this sweep (in-app poller
+    + optional external cron) guarantees redelivery after a process death. Notifications,
+    insight refreshes, and embeddings are retriable/disposable: loss costs a nudge, not
+    money, and each is re-creatable from durable state.
+    """
+    from ada.services.apply import recover_stuck_applications
+
+    return await recover_stuck_runs(), await recover_stuck_applications()
+
+
 async def recover_stuck_runs() -> int:
     """Re-dispatch runs left in PAID past the dispatch window.
 

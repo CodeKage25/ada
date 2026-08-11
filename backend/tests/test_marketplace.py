@@ -215,3 +215,56 @@ async def test_candidate_responds_to_own_intro_once():
                 await s.execute(delete(Job).where(Job.id == job_id))
             await s.execute(delete(User).where(User.id.in_([emp, cand, other])))
             await s.commit()
+
+
+@_db
+async def test_verified_talent_filter_excludes_self_attested():
+    """Employer 'verified' filter means independent verification only — a self-attested
+    candidate must not pass as verified."""
+    import uuid as _uuid
+
+    from sqlalchemy import delete
+
+    from ada.db.models import Profile, User
+    from ada.db.repositories import ProfileRepository
+    from ada.db.session import _session_factory, init_db
+
+    await init_db()
+    attested, kyc = _uuid.uuid4().hex, _uuid.uuid4().hex
+    marker = f"zzmk{attested[:8]}"
+    try:
+        async with _session_factory() as s:
+            s.add(User(id=attested, email=f"{attested}@ex.com"))
+            s.add(User(id=kyc, email=f"{kyc}@ex.com"))
+            await s.commit()
+            repo = ProfileRepository(s)
+            for uid in (attested, kyc):
+                await repo.upsert(user_id=uid, profile_text=f"{marker} engineer", linkedin_url=None)
+                await s.execute(
+                    Profile.__table__.update().where(Profile.user_id == uid).values(
+                        discoverable=True, headline=marker
+                    )
+                )
+                await s.commit()
+            await repo.set_identity_verified(attested, method="attested", level="self_attested")
+            await repo.set_identity_verified(
+                kyc, method="smile:nin", level="government_id_verified"
+            )
+
+            everyone = await repo.search_talent(
+                q=marker, location=None, seniority=None, verified_only=False,
+                exclude=None, limit=10,
+            )
+            verified = await repo.search_talent(
+                q=marker, location=None, seniority=None, verified_only=True,
+                exclude=None, limit=10,
+            )
+            everyone_ids = {p.user_id for p in everyone}
+            verified_ids = {p.user_id for p in verified}
+            assert {attested, kyc} <= everyone_ids
+            assert kyc in verified_ids and attested not in verified_ids
+    finally:
+        async with _session_factory() as s:
+            await s.execute(delete(Profile).where(Profile.user_id.in_([attested, kyc])))
+            await s.execute(delete(User).where(User.id.in_([attested, kyc])))
+            await s.commit()

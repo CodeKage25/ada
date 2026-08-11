@@ -239,12 +239,18 @@ function IdentityPanel({ cred, onDone }: { cred: Credential | null; onDone: () =
       </p>
 
       {cred?.identity_verified ? (
-        <p className="mt-2 text-sm text-muted">
-          {cred.identity_method === "attested"
-            ? "Self-attested."
-            : `Verified with ${ID_LABELS[cred.identity_method?.split(":")[1]?.toUpperCase() ?? ""] ?? "a government ID"}.`}{" "}
-          Employers see this on your profile.
-        </p>
+        <div className="mt-2 text-sm text-muted">
+          <p>
+            {cred.identity_level === "government_id_verified"
+              ? `Government ID verified${cred.identity_method ? ` (${ID_LABELS[cred.identity_method.split(":")[1]?.toUpperCase() ?? ""] ?? "government ID"})` : ""}. Employers see a verified badge.`
+              : "Self-attested — you affirmed your identity. Employers see this as your own claim, not an independent check."}
+          </p>
+          {cred.identity_level !== "government_id_verified" && (
+            <p className="mt-1 text-xs">
+              Verify with a government ID to earn the independent “ID verified” badge.
+            </p>
+          )}
+        </div>
       ) : methods === null ? (
         <Skeleton className="mt-3 h-8 w-40" />
       ) : methods.kyc_enabled ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Check, Loader2, Send } from "lucide-react";
+import { AlertCircle, Check, ExternalLink, Loader2, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button, Input, Label } from "@/components/ui";
@@ -10,7 +10,13 @@ type Phase =
   | { kind: "idle" }
   | { kind: "identity" }
   | { kind: "working"; applicationId: string }
-  | { kind: "done"; status: ApplicationStatus; detail: string | null };
+  | {
+      kind: "done";
+      status: ApplicationStatus;
+      detail: string | null;
+      canRetry: boolean;
+      applyUrl: string | null;
+    };
 
 const POLL_MS = 3000;
 const POLL_LIMIT = 60;
@@ -21,6 +27,7 @@ export function ApplyButton({ jobId, runId }: { jobId: number; runId?: string })
   const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [liveStage, setLiveStage] = useState<string | null>(null);
   const polls = useRef(0);
 
   const start = useCallback(async () => {
@@ -30,7 +37,13 @@ export function ApplyButton({ jobId, runId }: { jobId: number; runId?: string })
       const res = await api.applyToJob(jobId, runId);
       if (res.already_applied && res.status !== "preparing") {
         const app = (await api.listApplications()).find((a) => a.id === res.application_id);
-        setPhase({ kind: "done", status: res.status, detail: app?.detail ?? null });
+        setPhase({
+          kind: "done",
+          status: res.status,
+          detail: app?.detail ?? null,
+          canRetry: app?.can_retry ?? true,
+          applyUrl: app?.apply_url ?? null,
+        });
       } else {
         polls.current = 0;
         setPhase({ kind: "working", applicationId: res.application_id });
@@ -67,13 +80,22 @@ export function ApplyButton({ jobId, runId }: { jobId: number; runId?: string })
       polls.current += 1;
       try {
         const app = (await api.listApplications()).find((a) => a.id === phase.applicationId);
+        if (app?.status === "preparing" && app.detail) setLiveStage(app.detail);
         if (app && app.status !== "preparing") {
-          setPhase({ kind: "done", status: app.status, detail: app.detail });
+          setPhase({
+            kind: "done",
+            status: app.status,
+            detail: app.detail,
+            canRetry: app.can_retry,
+            applyUrl: app.apply_url,
+          });
         } else if (polls.current >= POLL_LIMIT) {
           setPhase({
             kind: "done",
             status: "preparing",
             detail: "Still working — check the Applications page in a minute.",
+            canRetry: true,
+            applyUrl: null,
           });
         }
       } catch {
@@ -105,24 +127,42 @@ export function ApplyButton({ jobId, runId }: { jobId: number; runId?: string })
         {phase.detail && (
           <p className="max-w-56 text-right text-[11px] leading-snug text-muted">{phase.detail}</p>
         )}
-        <button
-          onClick={() => {
-            setPhase({ kind: "idle" });
-            void start();
-          }}
-          className="text-xs font-medium text-accent underline-offset-2 hover:underline"
-        >
-          Try again
-        </button>
+        {!phase.canRetry && phase.applyUrl ? (
+          <a
+            href={phase.applyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink hover:opacity-90"
+          >
+            Apply manually <ExternalLink className="size-3" />
+          </a>
+        ) : (
+          <button
+            onClick={() => {
+              setPhase({ kind: "idle" });
+              void start();
+            }}
+            className="text-xs font-medium text-accent underline-offset-2 hover:underline"
+          >
+            Try again
+          </button>
+        )}
       </div>
     );
   }
 
   if (phase.kind === "working") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent">
-        <Loader2 className="size-3.5 animate-spin" /> Ada is applying…
-      </span>
+      <div className="flex flex-col items-end gap-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent">
+          <Loader2 className="size-3.5 animate-spin" /> Ada is applying…
+        </span>
+        {liveStage && (
+          <p aria-live="polite" className="max-w-56 text-right text-[11px] leading-snug text-muted">
+            {liveStage}
+          </p>
+        )}
+      </div>
     );
   }
 
