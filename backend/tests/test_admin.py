@@ -68,3 +68,73 @@ async def test_audit_survives_user_deletion_and_overview_shape():
             await s.execute(delete(Profile).where(Profile.user_id == uid))
             await s.execute(delete(User).where(User.id == uid))
             await s.commit()
+
+
+@_db
+async def test_delete_employer_cascades_company_and_saved_candidates():
+    """An employer has rows candidates don't (company profile, saved candidates, intro
+    messages). Missing any of them made admin deletion crash on a FK violation."""
+    import uuid as _uuid
+
+    from sqlalchemy import delete, select
+
+    from ada.db.models import (
+        CompanyProfile,
+        Intro,
+        IntroMessage,
+        IntroStatus,
+        Job,
+        SavedCandidate,
+        User,
+    )
+    from ada.db.repositories import AdminRepository
+    from ada.db.session import _session_factory, init_db
+
+    await init_db()
+    emp, cand = _uuid.uuid4().hex, _uuid.uuid4().hex
+    job_id: int | None = None
+    intro_id = _uuid.uuid4().hex
+    try:
+        async with _session_factory() as s:
+            s.add(User(id=emp, email=f"{emp}@co.com", account_type="employer", company="Acme"))
+            s.add(User(id=cand, email=f"{cand}@ex.com"))
+            await s.commit()
+            job = Job(source="test", external_id=_uuid.uuid4().hex, title="SWE",
+                      company="Acme", location="Remote", description="d", posted_by=emp)
+            s.add(job)
+            s.add(CompanyProfile(user_id=emp, name="Acme"))
+            await s.commit()
+            job_id = job.id
+            s.add(SavedCandidate(id=_uuid.uuid4().hex, employer_id=emp,
+                                 candidate_id=cand, job_id=job_id))
+            s.add(Intro(id=intro_id, employer_id=emp, candidate_id=cand, job_id=job_id,
+                        message=None, status=IntroStatus.ACCEPTED))
+            await s.commit()
+            s.add(IntroMessage(intro_id=intro_id, sender="employer", body="hello"))
+            await s.commit()
+
+        async with _session_factory() as s:
+            await AdminRepository(s).delete_user(emp)
+
+        async with _session_factory() as s:
+            assert await s.get(User, emp) is None
+            assert await s.get(CompanyProfile, emp) is None
+            left = (await s.execute(select(SavedCandidate).where(
+                SavedCandidate.employer_id == emp))).scalars().all()
+            assert not left
+            msgs = (await s.execute(select(IntroMessage).where(
+                IntroMessage.intro_id == intro_id))).scalars().all()
+            assert not msgs
+            # The posted role survives the employer, with its owner cleared.
+            job = await s.get(Job, job_id)
+            assert job is not None and job.posted_by is None
+    finally:
+        async with _session_factory() as s:
+            await s.execute(delete(IntroMessage).where(IntroMessage.intro_id == intro_id))
+            await s.execute(delete(Intro).where(Intro.id == intro_id))
+            await s.execute(delete(SavedCandidate).where(SavedCandidate.candidate_id == cand))
+            if job_id is not None:
+                await s.execute(delete(Job).where(Job.id == job_id))
+            await s.execute(delete(CompanyProfile).where(CompanyProfile.user_id == emp))
+            await s.execute(delete(User).where(User.id.in_([emp, cand])))
+            await s.commit()
