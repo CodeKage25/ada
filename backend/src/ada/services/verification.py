@@ -43,8 +43,15 @@ class _Question(BaseModel):
     looks_for: str = ""
 
 
+class _AnswerNote(BaseModel):
+    score: int = 0
+    note: str = ""
+
+
 class _Grade(BaseModel):
-    per_answer: list[dict[str, Any]] = Field(default_factory=list)
+    """Typed per-answer notes: a free-form dict here emits `additionalProperties`, which
+    the Gemini Developer API rejects outright — silently degrading grading to heuristics."""
+    per_answer: list[_AnswerNote] = Field(default_factory=list)
     overall: int = 0
     summary: str = ""
 
@@ -122,7 +129,7 @@ class VerificationService:
             )
             g = _Grade.model_validate_json(resp.text or "{}")
             overall = max(0, min(100, g.overall))
-            return overall, g.per_answer, g.summary, "ai-graded"
+            return overall, [n.model_dump() for n in g.per_answer], g.summary, "ai-graded"
         except Exception as exc:  # noqa: BLE001 — degrade to a transparent heuristic
             log.warning("verify_grade_fallback", skill=skill, error=str(exc))
             scores = [_heuristic(a) for a in answers]

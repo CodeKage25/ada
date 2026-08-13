@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", repr=False)
     # Uploaded CV originals land here (empty = extraction only, nothing stored).
     gcs_bucket: str = ""
-    vertex_model: str = "gemini-2.5-flash"
+    vertex_model: str = "gemini-flash-latest"
     embedding_model: str = "text-embedding-004"
     # AI Studio embedding model (used when gemini_api_key is set); reduced to EMBED_DIM.
     gemini_embedding_model: str = "gemini-embedding-001"

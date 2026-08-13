@@ -1356,6 +1356,7 @@ class AdminRepository:
         from ada.db.models import (
             AuthToken,
             ChatTurn,
+            JobInteraction,
             Notification,
             Outcome,
             Session,
@@ -1366,10 +1367,25 @@ class AdminRepository:
         await self._s.execute(
             update(Job).where(Job.posted_by == user_id).values(posted_by=None)
         )
+        # Intro messages hang off intros, so they must go before the intros themselves.
+        intro_ids = select(Intro.id).where(
+            or_(Intro.employer_id == user_id, Intro.candidate_id == user_id)
+        )
+        await self._s.execute(
+            delete(IntroMessage).where(IntroMessage.intro_id.in_(intro_ids))
+        )
+        await self._s.execute(
+            delete(SavedCandidate).where(
+                or_(
+                    SavedCandidate.employer_id == user_id,
+                    SavedCandidate.candidate_id == user_id,
+                )
+            )
+        )
         for model in (
             Outcome, Application, Assessment, Notification, NotificationPref,
-            PushSubscription, UserMemory, ChatTurn, UploadedDocument, Profile,
-            Subscription, Run, AuthToken, Session,
+            PushSubscription, UserMemory, ChatTurn, UploadedDocument, JobInteraction,
+            CompanyProfile, Profile, Subscription, Run, AuthToken, Session,
         ):
             await self._s.execute(delete(model).where(model.user_id == user_id))
         await self._s.execute(
