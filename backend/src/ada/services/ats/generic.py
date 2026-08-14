@@ -88,7 +88,7 @@ async def _model_map(
     client = vertex_client()
     resp = await retry_async(
         lambda: client.aio.models.generate_content(
-            model=s.vertex_model,
+            model=s.model_name,
             contents=mapping_prompt(fields, answers),
             config={"response_mime_type": "application/json"},
         ),

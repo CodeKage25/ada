@@ -77,7 +77,7 @@ class VerificationService:
     def __init__(self) -> None:
         s = get_settings()
         self._client = vertex_client()
-        self._model = s.vertex_model
+        self._model = s.model_name
         self._attempts = s.llm_max_attempts
         self._pass_mark = s.verify_pass_mark
 

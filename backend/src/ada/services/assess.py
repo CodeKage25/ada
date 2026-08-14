@@ -42,7 +42,7 @@ async def assess_cv(cv_text: str, target_role: str | None) -> Assessment:
     try:
         resp = await retry_async(
             lambda: vertex_client().aio.models.generate_content(
-                model=s.vertex_model,
+                model=s.model_name,
                 contents=prompt,
                 config={
                     "system_instruction": _SYSTEM,

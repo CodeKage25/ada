@@ -24,7 +24,7 @@ Task: rewrite the candidate's CV so it is tightly targeted to the stated role.
 class CVService:
     def __init__(self) -> None:
         self._client = vertex_client()
-        self._model = get_settings().vertex_model
+        self._model = get_settings().model_name
         self._attempts = get_settings().llm_max_attempts
 
     async def rewrite(self, *, cv_text: str, target_role: str) -> str:

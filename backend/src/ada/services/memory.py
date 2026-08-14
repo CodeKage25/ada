@@ -34,7 +34,7 @@ _MAX_EXISTING_IN_PROMPT = 60
 class MemoryService:
     def __init__(self) -> None:
         self._client = vertex_client()
-        self._model = get_settings().vertex_model
+        self._model = get_settings().model_name
         self._search = SearchService()
 
     async def remember(

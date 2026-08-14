@@ -77,7 +77,7 @@ def _candidate_brief(profile: Profile, index: int) -> str:
 class UcheService:
     def __init__(self) -> None:
         self._client = vertex_client()
-        self._model = get_settings().vertex_model
+        self._model = get_settings().model_name
         self._attempts = get_settings().llm_max_attempts
         self._search = SearchService()
 

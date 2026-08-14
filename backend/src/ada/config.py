@@ -36,7 +36,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = Field(default="", repr=False)
     # Uploaded CV originals land here (empty = extraction only, nothing stored).
     gcs_bucket: str = ""
-    vertex_model: str = "gemini-flash-latest"
+    # Empty = pick per backend (see `model_name`): the two Gemini backends do not share a
+    # model namespace, so one hard-coded default is wrong on whichever one it isn't from.
+    vertex_model: str = ""
     embedding_model: str = "text-embedding-004"
     # AI Studio embedding model (used when gemini_api_key is set); reduced to EMBED_DIM.
     gemini_embedding_model: str = "gemini-embedding-001"
@@ -154,6 +156,17 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.allowed_origin.split(",") if o.strip()]
+
+    @property
+    def model_name(self) -> str:
+        """The generation model, resolved for the backend actually in use.
+
+        AI Studio serves rolling aliases (`gemini-flash-latest`); Vertex serves versioned
+        publisher models and 404s on those aliases. VERTEX_MODEL overrides both.
+        """
+        if self.vertex_model:
+            return self.vertex_model
+        return "gemini-flash-latest" if self.gemini_api_key else "gemini-2.5-flash"
 
     @property
     def admin_email_set(self) -> set[str]:

@@ -60,3 +60,17 @@ def test_vertex_client_is_cached_so_gc_cannot_close_it():
     first = vertex_client()
     assert vertex_client() is first
     assert vertex_client.cache_info().currsize == 1
+
+
+def test_model_name_resolves_per_backend():
+    """Vertex and AI Studio don't share a model namespace: an AI Studio rolling alias
+    404s on Vertex, so the default must follow the backend actually in use."""
+    from ada.config import Settings
+
+    def mk(**kw):
+        return Settings(database_url="x", _env_file=None, **kw)
+
+    assert mk().model_name == "gemini-2.5-flash"                       # Vertex
+    assert mk(gemini_api_key="k").model_name == "gemini-flash-latest"  # AI Studio
+    assert mk(vertex_model="pinned-model").model_name == "pinned-model"
+    assert mk(gemini_api_key="k", vertex_model="pinned").model_name == "pinned"

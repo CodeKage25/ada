@@ -31,7 +31,7 @@ _MAX_TURNS = 30
 class CoachService:
     def __init__(self) -> None:
         self._client = vertex_client()
-        self._model = get_settings().vertex_model
+        self._model = get_settings().model_name
 
     async def stream(
         self,
