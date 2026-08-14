@@ -49,3 +49,14 @@ def test_prod_rejects_wildcard_cors():
 def test_cors_origins_parsed():
     s = Settings(database_url="x", allowed_origin="https://a, https://b")
     assert s.cors_origins == ["https://a", "https://b"]
+
+
+def test_vertex_client_is_cached_so_gc_cannot_close_it():
+    """A per-call client can be collected (closing its transport) before the coroutine it
+    built is awaited — the cache keeps one strong reference for the process lifetime."""
+    from ada.vertex import vertex_client
+
+    vertex_client.cache_clear()
+    first = vertex_client()
+    assert vertex_client() is first
+    assert vertex_client.cache_info().currsize == 1
