@@ -42,7 +42,17 @@ class SubmitOutcome:
 # Failure codes that retrying cannot fix — the site actively resists automation or needs
 # information only the candidate has. These flip the UI to the manual-apply handoff.
 PERMANENT_CODES = frozenset(
-    {"blocked", "no_form", "login_walled", "fields_missing", "manual_questions"}
+    {
+        "blocked",
+        "no_form",
+        "login_walled",
+        "fields_missing",
+        "manual_questions",
+        # Submit was clicked but no confirmation appeared: it may well have gone through,
+        # so retrying risks sending the employer a duplicate. Hand off instead.
+        "no_confirmation",
+        "no_submit",
+    }
 )
 
 

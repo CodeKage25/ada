@@ -14,9 +14,8 @@ from ada.services.ats.executor import (
     BLOCKED_DETAIL,
     TOTAL_TIMEOUT_S,
     Progress,
-    _any_visible,
     _collect_errors,
-    _texts_for,
+    confirmed,
 )
 from ada.vertex import vertex_client
 
@@ -25,9 +24,6 @@ if TYPE_CHECKING:
 
 CV_FILE_MARKER = "__CV_FILE__"
 APPLY_LINK_PATTERN = re.compile(r"\bapply\b", re.I)
-CONFIRMATION_PATTERN = re.compile(
-    r"thank you|application (received|submitted|sent)|successfully (applied|submitted)", re.I
-)
 FIELD_LIMIT = 40
 
 _FIELD_JS = """
@@ -160,7 +156,7 @@ async def _run(
                 )
             await note(on_progress, "Waiting for the employer's confirmation…")
             await page.wait_for_load_state("networkidle", timeout=30_000)
-            if await _confirmed(page):
+            if await confirmed(page):
                 return SubmitOutcome(status="submitted")
             errors = await _collect_errors(page)
             if errors:
@@ -171,7 +167,9 @@ async def _run(
                 )
             return SubmitOutcome(
                 status="needs_attention",
-                detail="No submission confirmation appeared — the form may have extra steps.",
+                detail="Ada filled and submitted the form but the employer showed no "
+                       "confirmation — it may have extra steps. Open it to check and "
+                       "finish; don't resubmit blindly.",
                 code="no_confirmation",
             )
         finally:
@@ -248,32 +246,3 @@ async def _submit(page: "Page") -> bool:
         if await _attempt(page.locator(selector).first.click(timeout=8_000)):
             return True
     return False
-
-
-async def _confirmed(page: "Page") -> bool:
-    if await _any_visible(
-        page, ("text=Thank you for applying", "text=Application submitted",
-               "text=Application received", '[role="status"]:has-text("submitted")')
-    ):
-        return True
-    # A stray "thank you" banner never removes the form — require the application
-    # form to be gone AND a confirmation phrase before calling it submitted.
-    if not await _form_gone(page):
-        return False
-    for region in ("h1", "h2", "main", '[role="status"]', ".confirmation"):
-        for text in await _texts_for(page, region):
-            if CONFIRMATION_PATTERN.search(text):
-                return True
-    return False
-
-
-async def _form_gone(page: "Page") -> bool:
-    selector = (
-        "input:visible:not([type=hidden]):not([type=submit]):not([type=button]), "
-        "textarea:visible"
-    )
-    try:
-        remaining = await page.locator(selector).count()
-    except Exception:
-        return False
-    return remaining == 0

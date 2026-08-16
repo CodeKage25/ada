@@ -56,8 +56,15 @@ def test_blocked_page_sniff():
 def test_permanent_codes_disable_retry_and_transient_keep_it():
     for code in ("blocked", "no_form", "login_walled", "fields_missing", "manual_questions"):
         assert can_retry(code) is False
-    for code in ("timeout", "interrupted", "crashed", "no_confirmation", None):
+    for code in ("timeout", "interrupted", "crashed", None):
         assert can_retry(code) is True
+
+
+def test_post_submit_outcomes_never_offer_a_blind_retry():
+    """Submit was already clicked: retrying could send the employer a duplicate
+    application, so these hand off to a manual check instead."""
+    assert can_retry("no_confirmation") is False
+    assert can_retry("no_submit") is False
 
 
 async def test_progress_note_is_cosmetic():
