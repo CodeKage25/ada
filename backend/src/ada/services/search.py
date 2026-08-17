@@ -48,6 +48,35 @@ def _confidence(similarity: float) -> Literal["high", "medium", "low"]:
     return "low"
 
 
+# How many nearest neighbours to pull per wanted slot before capping per employer.
+_OVERFETCH = 6
+
+
+def _diversify(
+    rows: list[tuple[Job, float]], quota: int, max_per_company: int
+) -> list[tuple[Job, float]]:
+    """Keep the ranking, but stop one employer owning every slot.
+
+    A company with hundreds of near-identical postings is genuinely nearest on all of
+    them, which makes a technically-correct result list useless to a candidate. Take at
+    most `max_per_company` per employer in score order; if that leaves the quota unfilled
+    (a thin corpus), top back up with the ones held back rather than returning fewer.
+    """
+    kept: list[tuple[Job, float]] = []
+    held: list[tuple[Job, float]] = []
+    counts: dict[str, int] = {}
+    for job, distance in rows:
+        company = (job.company or "").strip().lower()
+        if counts.get(company, 0) < max_per_company:
+            counts[company] = counts.get(company, 0) + 1
+            kept.append((job, distance))
+        else:
+            held.append((job, distance))
+        if len(kept) == quota:
+            return kept
+    return (kept + held)[:quota]
+
+
 def normalize_match(raw: dict) -> dict:
     """Backfill contract fields on legacy stored matches (pre score_type era) so no
     consumer ever renders an unqualified or null score as a percentage."""
@@ -120,7 +149,11 @@ class SearchService:
             quota = k if coverage >= 0.6 else (k + 1) // 2
             try:
                 vector = await self.embed(f"{target_role}\n\n{cv_text}")
-                rows = await jobs.knn(vector, quota)
+                # Over-fetch so the per-employer cap still has enough to fill the quota:
+                # one employer with hundreds of near-identical postings would otherwise
+                # take every nearest-neighbour slot.
+                rows = await jobs.knn(vector, quota * _OVERFETCH)
+                rows = _diversify(rows, quota, get_settings().match_max_per_company)
                 matches = [self._to_match(job, distance) for job, distance in rows]
             except Exception as exc:  # noqa: BLE001 — degrade to keywords, never fail the run
                 log.warning("match_embedding_unavailable", error=str(exc))

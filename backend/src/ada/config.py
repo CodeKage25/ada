@@ -80,6 +80,9 @@ class Settings(BaseSettings):
 
     # matching + interview
     jobs_match_k: int = 20
+    # Cap per employer in one match set: a company with hundreds of similar postings is
+    # nearest on all of them, which crowds every other employer out of the results.
+    match_max_per_company: int = 3
     # Below this many embedded jobs the vector index is too sparse to be meaningful,
     # so matching falls back to role keywords.
     min_embedded_for_vector: int = 500

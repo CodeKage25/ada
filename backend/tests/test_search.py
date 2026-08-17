@@ -145,7 +145,7 @@ async def test_match_halves_semantic_quota_at_partial_coverage(monkeypatch):
     # 10% coverage: semantic gets ceil(k/2), keywords fill the rest from the whole corpus.
     sparse = _FakeJobs(rows, embedded=600, total=6_000, keyword_jobs=keyword_jobs)
     got = await svc.match(jobs=sparse, target_role="engineer", cv_text="cv", k=9)
-    assert sparse.knn_asked == [5]
+    assert sparse.knn_asked == [5 * search._OVERFETCH]   # over-fetched, then capped to 5
     assert sum(1 for m in got if m.score_type == "semantic") == 5
     assert sum(1 for m in got if m.score_type == "keyword") == 4
     assert len(got) == 9
@@ -153,5 +153,50 @@ async def test_match_halves_semantic_quota_at_partial_coverage(monkeypatch):
     # Full coverage: semantic keeps every slot.
     dense = _FakeJobs(rows, embedded=6_000, total=6_000, keyword_jobs=keyword_jobs)
     got = await svc.match(jobs=dense, target_role="engineer", cv_text="cv", k=9)
-    assert dense.knn_asked == [9]
+    assert dense.knn_asked == [9 * search._OVERFETCH]
     assert all(m.score_type == "semantic" for m in got)
+
+
+def test_diversify_caps_one_employer_and_keeps_score_order():
+    """One employer with hundreds of near-identical roles must not own every slot."""
+    rows = [(_FakeJob(f"SWE {i}", "OpenAI", "SF", i), 0.1 + i / 100) for i in range(10)]
+    rows += [(_FakeJob("AI Platform", "Supabase", "Remote", 50), 0.9)]
+    rows += [(_FakeJob("Backend", "Stripe", "Lagos", 51), 0.95)]
+
+    got = search._diversify(rows, quota=5, max_per_company=3)
+    companies = [j.company for j, _ in got]
+    assert companies.count("OpenAI") == 3          # capped
+    assert set(companies) == {"OpenAI", "Supabase", "Stripe"}
+    assert [d for _, d in got] == sorted(d for _, d in got)   # ranking preserved
+
+
+def test_diversify_backfills_rather_than_returning_fewer():
+    """A thin corpus (one employer only) still fills the quota — capping never starves."""
+    rows = [(_FakeJob(f"SWE {i}", "OpenAI", "SF", i), 0.1 + i / 100) for i in range(8)]
+    got = search._diversify(rows, quota=5, max_per_company=2)
+    assert len(got) == 5
+    assert {j.company for j, _ in got} == {"OpenAI"}
+
+
+async def test_match_returns_varied_employers(monkeypatch):
+    monkeypatch.setattr(search, "vertex_client", lambda: object())
+    svc = SearchService()
+
+    async def fake_embed(_):
+        return [0.0] * 768
+
+    svc.embed = fake_embed  # type: ignore[method-assign]
+    # An OpenAI-heavy corpus (the real prod shape) with other employers slightly further.
+    rows = [(_FakeJob(f"SWE {i}", "OpenAI", "SF", i), 0.2) for i in range(30)]
+    rows += [
+        (_FakeJob("AI Platform", "Supabase", "Remote", 90), 0.30),
+        (_FakeJob("Backend", "Stripe", "Lagos", 91), 0.31),
+        (_FakeJob("Data Eng", "Databricks", "Remote", 92), 0.32),
+        (_FakeJob("Platform", "Cloudflare", "Austin", 93), 0.33),
+    ]
+    jobs = _FakeJobs(rows, embedded=6000, total=6000)
+
+    out = await svc.match(jobs=jobs, target_role="Software Engineer", cv_text="cv", k=6)
+    companies = [m.company for m in out]
+    assert companies.count("OpenAI") == 3            # capped, not all six
+    assert len(set(companies)) == 4                  # the rest of the slots go elsewhere
