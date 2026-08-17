@@ -1350,6 +1350,32 @@ class AdminRepository:
             stmt = stmt.where(User.account_type == account_type)
         return list((await self._s.execute(stmt)).scalars().all())
 
+    async def delete_job(self, job_id: int) -> tuple[str, str] | None:
+        """Drop a listing and everything pointing at it. Returns (title, company) for the
+        audit trail, or None when it's already gone."""
+        from ada.db.models import JobInteraction
+
+        job = await self._s.get(Job, job_id)
+        if job is None:
+            return None
+        identity = (job.title, job.company)
+        await self._s.execute(delete(JobInteraction).where(JobInteraction.job_id == job_id))
+        await self._s.execute(delete(Application).where(Application.job_id == job_id))
+        await self._s.execute(
+            update(Outcome).where(Outcome.job_id == job_id).values(job_id=None)
+        )
+        await self._s.execute(
+            update(SavedCandidate).where(SavedCandidate.job_id == job_id).values(job_id=None)
+        )
+        intro_ids = select(Intro.id).where(Intro.job_id == job_id)
+        await self._s.execute(
+            delete(IntroMessage).where(IntroMessage.intro_id.in_(intro_ids))
+        )
+        await self._s.execute(delete(Intro).where(Intro.job_id == job_id))
+        await self._s.execute(delete(Job).where(Job.id == job_id))
+        await self._s.commit()
+        return identity
+
     async def delete_user(self, user_id: str) -> None:
         """Hard-delete a user and every row that references them, in FK-safe order.
         Employer-posted jobs are kept (posted_by nulled), so the job pool is preserved."""

@@ -138,3 +138,62 @@ async def test_delete_employer_cascades_company_and_saved_candidates():
             await s.execute(delete(CompanyProfile).where(CompanyProfile.user_id == emp))
             await s.execute(delete(User).where(User.id.in_([emp, cand])))
             await s.commit()
+
+
+@_db
+async def test_delete_job_removes_it_and_its_references():
+    """A spam or test listing must leave the pool completely — a dangling triage row
+    would let the feed resurface a job that no longer exists."""
+    import uuid as _uuid
+
+    from sqlalchemy import delete, select
+
+    from ada.db.models import Intro, IntroMessage, IntroStatus, Job, JobInteraction, User
+    from ada.db.repositories import AdminRepository
+    from ada.db.session import _session_factory, init_db
+
+    await init_db()
+    emp, cand = _uuid.uuid4().hex, _uuid.uuid4().hex
+    intro_id = _uuid.uuid4().hex
+    job_id: int | None = None
+    try:
+        async with _session_factory() as s:
+            s.add(User(id=emp, email=f"{emp}@co.com", account_type="employer"))
+            s.add(User(id=cand, email=f"{cand}@ex.com"))
+            await s.commit()
+            job = Job(source="test", external_id=_uuid.uuid4().hex, title="Spam Role",
+                      company="Acme E2E", location="Remote", description="d", posted_by=emp)
+            s.add(job)
+            await s.commit()
+            job_id = job.id
+            s.add(JobInteraction(user_id=cand, job_id=job_id, action="tracked"))
+            s.add(Intro(id=intro_id, employer_id=emp, candidate_id=cand, job_id=job_id,
+                        message=None, status=IntroStatus.REQUESTED))
+            await s.commit()
+            s.add(IntroMessage(intro_id=intro_id, sender="employer", body="hi"))
+            await s.commit()
+
+        async with _session_factory() as s:
+            identity = await AdminRepository(s).delete_job(job_id)
+        assert identity == ("Spam Role", "Acme E2E")
+
+        async with _session_factory() as s:
+            assert await s.get(Job, job_id) is None
+            left = (await s.execute(select(JobInteraction).where(
+                JobInteraction.job_id == job_id))).scalars().all()
+            assert not left
+            assert not (await s.execute(select(Intro).where(
+                Intro.id == intro_id))).scalars().all()
+            assert not (await s.execute(select(IntroMessage).where(
+                IntroMessage.intro_id == intro_id))).scalars().all()
+            # Deleting an absent job is a clean no-op, not a crash.
+            assert await AdminRepository(s).delete_job(job_id) is None
+    finally:
+        async with _session_factory() as s:
+            await s.execute(delete(IntroMessage).where(IntroMessage.intro_id == intro_id))
+            await s.execute(delete(Intro).where(Intro.id == intro_id))
+            await s.execute(delete(JobInteraction).where(JobInteraction.user_id == cand))
+            if job_id is not None:
+                await s.execute(delete(Job).where(Job.id == job_id))
+            await s.execute(delete(User).where(User.id.in_([emp, cand])))
+            await s.commit()

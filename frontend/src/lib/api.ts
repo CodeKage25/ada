@@ -859,6 +859,10 @@ export const api = {
       request<{ ok: boolean }>(`/api/admin/users/${id}/subscription`, { method: "DELETE" }),
     deleteUser: (id: string) =>
       request<{ ok: boolean }>(`/api/admin/users/${id}`, { method: "DELETE" }),
+    deleteJob: (jobId: number) =>
+      request<{ ok: boolean; title: string; company: string }>(`/api/admin/jobs/${jobId}`, {
+        method: "DELETE",
+      }),
     impersonate: (id: string) =>
       request<{ ok: boolean; impersonating: string }>(`/api/admin/users/${id}/impersonate`, {
         method: "POST",

@@ -1,10 +1,10 @@
 "use client";
 
-import { Loader2, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button, Card, StatusBadge } from "@/components/ui";
-import { api, type AdminEvent, type AdminRun } from "@/lib/api";
+import { ApiError, api, type AdminEvent, type AdminRun } from "@/lib/api";
 
 const RUN_STATES = ["", "pending_payment", "paid", "running", "complete", "failed"];
 const TONE: Record<string, "neutral" | "accent" | "success" | "warn" | "danger"> = {
@@ -17,6 +17,7 @@ const TONE: Record<string, "neutral" | "accent" | "success" | "warn" | "danger">
 
 export default function AdminOpsPage() {
   const [busy, setBusy] = useState("");
+  const [jobId, setJobId] = useState("");
   const [msg, setMsg] = useState("");
   const [status, setStatus] = useState("");
   const [runs, setRuns] = useState<AdminRun[] | null>(null);
@@ -64,6 +65,44 @@ export default function AdminOpsPage() {
           </Button>
           {msg && <span className="text-xs text-muted">{msg}</span>}
         </div>
+      </Card>
+
+      <Card className="mb-5 p-4">
+        <p className="text-sm font-medium">Remove a listing</p>
+        <p className="mt-1 text-xs text-muted">
+          Pull a spam, duplicate, or test job out of the pool. Its triage and application
+          rows go too, so the feed can&apos;t resurface it.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const id = Number(jobId);
+            if (!id || !confirm(`Permanently remove job #${id} from the pool?`)) return;
+            setBusy("deljob");
+            setMsg("");
+            try {
+              const r = await api.admin.deleteJob(id);
+              setMsg(`Removed “${r.title}” — ${r.company}.`);
+              setJobId("");
+            } catch (err) {
+              setMsg(err instanceof ApiError ? err.message : "Couldn't remove that job.");
+            } finally {
+              setBusy("");
+            }
+          }}
+          className="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <input
+            value={jobId}
+            onChange={(e) => setJobId(e.target.value)}
+            placeholder="Job ID"
+            inputMode="numeric"
+            className="w-32 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+          />
+          <Button type="submit" variant="danger" loading={busy === "deljob"} className="!py-2">
+            <Trash2 className="size-4" /> Remove
+          </Button>
+        </form>
       </Card>
 
       <div className="mb-3 flex items-center justify-between">

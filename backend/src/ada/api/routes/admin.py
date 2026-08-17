@@ -172,6 +172,25 @@ async def revoke_subscription(
     return {"ok": True}
 
 
+@router.delete("/jobs/{job_id}")
+async def delete_job(
+    job_id: int,
+    session: AsyncSession = Depends(get_session),
+    admin: User = Depends(require_admin),
+) -> dict:
+    """Remove a listing from the pool — spam, a duplicate, or test data. Candidate
+    triage/application rows referencing it go too, so the feed can't resurface it."""
+    repo = AdminRepository(session)
+    job = await repo.delete_job(job_id)
+    if job is None:
+        raise HTTPException(404, "Job not found.")
+    await repo.record_audit(
+        admin_email=admin.email, action="delete_job",
+        detail={"job_id": job_id, "title": job[0], "company": job[1]},
+    )
+    return {"ok": True, "title": job[0], "company": job[1]}
+
+
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: str,
